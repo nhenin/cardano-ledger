@@ -34,7 +34,7 @@ import Cardano.Ledger.Alonzo.Scripts (
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
 import Cardano.Ledger.BaseTypes (Nonce (..), ProtVer (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Mary.Value (MaryValue)
+import Cardano.Ledger.Mary.Value (MaryValueRepresentation (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.Language (Language (..), plutusBinary)
 import Cardano.Ledger.Shelley.API (
@@ -163,7 +163,7 @@ exampleAlonzoBasedTopTx ::
   forall era.
   ( AlonzoEraTx era
   , EraPlutusTxInfo 'PlutusV1 era
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   ) =>
   Tx TopTx era
 exampleAlonzoBasedTopTx =
@@ -174,7 +174,7 @@ exampleAlonzoBasedTx ::
   forall era l.
   ( AlonzoEraTx era
   , EraPlutusTxInfo 'PlutusV1 era
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   , Typeable l
   ) =>
   Tx l era
@@ -196,7 +196,7 @@ addAlonzoBasedTxFeatureExamples ::
   forall era l.
   ( AlonzoEraTx era
   , EraPlutusTxInfo 'PlutusV1 era
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   ) =>
   Tx l era ->
   Tx l era
@@ -219,7 +219,7 @@ addAlonzoBasedTxFeatureExamples tx =
       <>~ StrictSeq.fromList
         [ mkBasicTxOut
             (mkAddr examplePayKey exampleStakeKey)
-            (exampleMultiAssetValue 3)
+            (fromMaryValue $ exampleMultiAssetValue 3)
             & dataHashTxOutL .~ SJust (mkDummySafeHash 1)
         ]
     & bodyTxL . scriptIntegrityHashTxBodyL .~ SJust (mkDummySafeHash 42)

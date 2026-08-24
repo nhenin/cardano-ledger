@@ -69,7 +69,7 @@ exampleMaryBasedTx ::
   forall era l.
   ( EraTx era
   , MaryEraTxBody era
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   , AllegraEraTxAuxData era
   , AllegraEraScript era
   , Typeable l
@@ -79,7 +79,7 @@ exampleMaryBasedTx =
   exampleAllegraBasedTx
     & bodyTxL . outputsTxBodyL
       <>~ StrictSeq.fromList
-        [ mkBasicTxOut (mkAddr examplePayKey exampleStakeKey) $ exampleMultiAssetValue 1
+        [ mkBasicTxOut (mkAddr examplePayKey exampleStakeKey) $ fromMaryValue $ exampleMultiAssetValue 1
         ]
     & bodyTxL . mintTxBodyL .~ exampleMultiAsset 1
 

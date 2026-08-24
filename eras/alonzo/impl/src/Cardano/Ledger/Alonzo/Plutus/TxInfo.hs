@@ -72,6 +72,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Value (
   AssetName (..),
   MaryValue (..),
+  MaryValueRepresentation (..),
   MultiAsset (..),
   PolicyID (..),
  )
@@ -275,7 +276,7 @@ transValidityInterval _ epochInfo systemStart = \case
 
 -- | Translate a TxOut. Returns `Nothing` if a Byron address is present in the TxOut.
 transTxOut ::
-  (Value era ~ MaryValue, AlonzoEraTxOut era) => TxOut era -> Maybe PV1.TxOut
+  (MaryValueRepresentation (Value era), AlonzoEraTxOut era) => TxOut era -> Maybe PV1.TxOut
 transTxOut txOut = do
   -- Minor optimization:
   -- We can check for Byron address without decompacting the address in the TxOut
@@ -283,7 +284,8 @@ transTxOut txOut = do
   let val = txOut ^. valueTxOutL
       dataHash = txOut ^. dataHashTxOutL
   address <- transAddr (txOut ^. addrTxOutL)
-  pure $ PV1.TxOut address (transValue val) (transDataHash <$> strictMaybeToMaybe dataHash)
+  pure $
+    PV1.TxOut address (transValue (toMaryValue val)) (transDataHash <$> strictMaybeToMaybe dataHash)
 
 transTxBodyId :: EraTxBody era => TxBody l era -> PV1.TxId
 transTxBodyId txBody = PV1.TxId (transSafeHash (hashAnnotated @_ @EraIndependentTxBody txBody))

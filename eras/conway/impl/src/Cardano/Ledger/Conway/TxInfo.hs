@@ -102,8 +102,7 @@ import Cardano.Ledger.Conway.Tx ()
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.UTxO ()
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Mary (MaryValue)
-import Cardano.Ledger.Mary.Value (MultiAsset)
+import Cardano.Ledger.Mary.Value (MaryValueRepresentation (..), MultiAsset)
 import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Plutus.Language (
   Language (..),
@@ -315,7 +314,7 @@ instance
 transTxOutV1 ::
   forall era.
   ( Inject (BabbageContextError era) (ContextError era)
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   , BabbageEraTxOut era
   ) =>
   TxOutSource ->
@@ -332,7 +331,7 @@ transTxOutV1 txOutSource txOut = do
 transTxInInfoV1 ::
   forall era.
   ( Inject (BabbageContextError era) (ContextError era)
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   , BabbageEraTxOut era
   ) =>
   UTxO era ->
@@ -347,7 +346,7 @@ transTxInInfoV1 utxo txIn = do
 transTxInInfoV3 ::
   forall era.
   ( Inject (BabbageContextError era) (ContextError era)
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   , BabbageEraTxOut era
   ) =>
   UTxO era ->

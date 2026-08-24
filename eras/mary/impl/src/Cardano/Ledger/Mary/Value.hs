@@ -17,6 +17,7 @@ module Cardano.Ledger.Mary.Value (
   PolicyID (..),
   AssetName (..),
   MaryValue (..),
+  MaryValueRepresentation (..),
   MultiAsset (..),
   insertMultiAsset,
   lookupMultiAsset,
@@ -218,6 +219,27 @@ instance Inject Coin MaryValue where
 
 -- ===================================================
 -- Make the Val instance of MaryValue
+
+-- | Values that are representationally a 'MaryValue': same arithmetic and
+-- same wire format, possibly different semantics behind a newtype. The two
+-- conversions must be total and mutually inverse:
+--
+-- @
+--   toMaryValue . fromMaryValue = id
+--   fromMaryValue . toMaryValue = id
+-- @
+--
+-- Era-generic code uses 'fromMaryValue' where it builds a value in the
+-- merged pre-Dijkstra shape, and 'toMaryValue' where it inspects one; an era
+-- with different value semantics (Dijkstra's @Assets@) makes both crossings
+-- explicit in its instance.
+class Val v => MaryValueRepresentation v where
+  fromMaryValue :: MaryValue -> v
+  toMaryValue :: v -> MaryValue
+
+instance MaryValueRepresentation MaryValue where
+  fromMaryValue = id
+  toMaryValue = id
 
 instance Val MaryValue where
   s <×> MaryValue c (MultiAsset m) =

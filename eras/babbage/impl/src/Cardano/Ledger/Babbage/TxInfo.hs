@@ -64,7 +64,7 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.Mary.Value (MaryValue)
+import Cardano.Ledger.Mary.Value (MaryValueRepresentation (..))
 import Cardano.Ledger.Plutus.Data (Datum (..), binaryDataToData, getPlutusData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (
@@ -110,7 +110,7 @@ transReferenceScript (SJust s) = Just . transScriptHash . hashScript @era $ s
 transTxOutV1 ::
   forall era.
   ( Inject (BabbageContextError era) (ContextError era)
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   , BabbageEraTxOut era
   ) =>
   TxOutSource ->
@@ -130,7 +130,7 @@ transTxOutV1 txOutSource txOut = do
 transTxOutV2 ::
   forall era.
   ( Inject (BabbageContextError era) (ContextError era)
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   , BabbageEraTxOut era
   ) =>
   TxOutSource ->
@@ -153,13 +153,13 @@ transTxOutV2 txOutSource txOut = do
   case transAddr (txOut ^. addrTxOutL) of
     Nothing -> Left $ inject $ ByronTxOutInContext @era txOutSource
     Just addr ->
-      Right (PV2.TxOut addr (Alonzo.transValue val) datum referenceScript)
+      Right (PV2.TxOut addr (Alonzo.transValue (toMaryValue val)) datum referenceScript)
 
 -- | Given a TxIn, look it up in the UTxO. If it exists, translate it to the V1 context
 transTxInInfoV1 ::
   forall era.
   ( Inject (BabbageContextError era) (ContextError era)
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   , BabbageEraTxOut era
   ) =>
   UTxO era ->
@@ -174,7 +174,7 @@ transTxInInfoV1 utxo txIn = do
 transTxInInfoV2 ::
   forall era.
   ( Inject (BabbageContextError era) (ContextError era)
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   , BabbageEraTxOut era
   ) =>
   UTxO era ->

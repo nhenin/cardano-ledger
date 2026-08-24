@@ -20,7 +20,13 @@ import Cardano.Ledger.Alonzo.TxWits (unTxDatsL)
 import Cardano.Ledger.BaseTypes (Globals (networkId), StrictMaybe (..), inject, natVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..), credToText)
-import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
+import Cardano.Ledger.Mary.Value (
+  AssetName (..),
+  MaryValue (..),
+  MaryValueRepresentation (..),
+  MultiAsset (..),
+  PolicyID (..),
+ )
 import Cardano.Ledger.Plutus (
   Data (..),
   hashData,
@@ -117,7 +123,7 @@ spec = describe "Valid transactions" $ do
             txOut =
               mkBasicTxOut
                 (mkAddr alwaysSucceedsWithDatumHash StakeRefNull)
-                (MaryValue amount mempty)
+                (fromMaryValue $ MaryValue amount mempty)
                 & dataHashTxOutL .~ SJust datumHash
             txBody =
               mkBasicTxBody
@@ -184,7 +190,7 @@ alonzoToConwaySpec = do
             txOut =
               mkBasicTxOut
                 (mkAddr outputAddr StakeRefNull)
-                (MaryValue mempty multiAsset)
+                (fromMaryValue $ MaryValue mempty multiAsset)
             txBody =
               mkBasicTxBody
                 & inputsTxBodyL .~ fromList txIns

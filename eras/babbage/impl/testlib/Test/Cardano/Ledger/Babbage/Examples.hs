@@ -25,7 +25,7 @@ import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Genesis (NoGenesis (..))
-import Cardano.Ledger.Mary.Value (MaryValue (..))
+import Cardano.Ledger.Mary.Value (MaryValue (..), MaryValueRepresentation (..))
 import Cardano.Ledger.Plutus.Data (
   Datum (..),
   dataToBinaryData,
@@ -101,13 +101,13 @@ exampleBabbageNewEpochState ::
   , EraStake era
   , EraCertState era
   , EraUTxO era
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   , Default (StashedAVVMAddresses era)
   ) =>
   NewEpochState era
 exampleBabbageNewEpochState =
   exampleNewEpochState
-    (exampleMultiAssetValue 1)
+    (fromMaryValue $ exampleMultiAssetValue 1)
     emptyPParams
     (emptyPParams & ppCoinsPerUTxOByteL .~ CoinPerByte (CompactCoin 1))
 
@@ -115,7 +115,7 @@ exampleBabbageBasedTopTx ::
   forall era.
   ( AlonzoEraTx era
   , BabbageEraTxBody era
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   , EraPlutusTxInfo PlutusV1 era
   , EraPlutusTxInfo PlutusV2 era
   ) =>
@@ -129,7 +129,7 @@ exampleBabbageBasedTx ::
   forall era l.
   ( AlonzoEraTx era
   , BabbageEraTxBody era
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   , EraPlutusTxInfo PlutusV1 era
   , EraPlutusTxInfo PlutusV2 era
   , Typeable l
@@ -143,7 +143,7 @@ addBabbageBasedTopTxFeatures ::
   forall era.
   ( AlonzoEraTx era
   , BabbageEraTxBody era
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   ) =>
   Tx TopTx era ->
   Tx TopTx era
@@ -156,7 +156,7 @@ addBabbageBasedTxFeatures ::
   forall era l.
   ( AlonzoEraTx era
   , BabbageEraTxBody era
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   , EraPlutusTxInfo PlutusV1 era
   , EraPlutusTxInfo PlutusV2 era
   ) =>
@@ -180,29 +180,29 @@ addBabbageBasedTxFeatures tx =
       <>~ StrictSeq.fromList
         [ mkBasicTxOut
             (mkAddr examplePayKey exampleStakeKey)
-            (exampleMultiAssetValue 1)
+            (fromMaryValue $ exampleMultiAssetValue 1)
             & datumTxOutL .~ Datum (dataToBinaryData exampleDatum)
             & referenceScriptTxOutL .~ SJust (alwaysSucceeds @'PlutusV1 3)
         , mkBasicTxOut
             (mkAddr examplePayKey exampleStakeKey)
-            (exampleMultiAssetValue 2)
+            (fromMaryValue $ exampleMultiAssetValue 2)
             & datumTxOutL .~ Datum (dataToBinaryData exampleDatum)
             & referenceScriptTxOutL .~ SJust (alwaysSucceeds @'PlutusV2 3)
         , mkBasicTxOut
             (mkAddr examplePayKey exampleStakeKey)
-            (exampleMultiAssetValue 3)
+            (fromMaryValue $ exampleMultiAssetValue 3)
             & referenceScriptTxOutL .~ SJust (fromNativeScript exampleShelleyScript)
         ]
 
 exampleCollateralOutput ::
   ( BabbageEraTxOut era
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   ) =>
   TxOut era
 exampleCollateralOutput =
   mkBasicTxOut
     (mkAddr examplePayKey exampleStakeKey)
-    (MaryValue (Coin 8675309) mempty)
+    (fromMaryValue $ MaryValue (Coin 8675309) mempty)
 
 exampleBabbageOnwardsEraPParams :: BabbageEraPParams era => PParams era
 exampleBabbageOnwardsEraPParams =

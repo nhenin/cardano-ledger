@@ -35,7 +35,7 @@ instance ShelleyEraImp MaryEra where
 class
   ( ShelleyEraImp era
   , MaryEraTest era
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   ) =>
   MaryEraImp era
 
@@ -51,4 +51,4 @@ mkTokenMintingTx sh = do
   pure $
     mkBasicTx mkBasicTxBody
       & bodyTxL . mintTxBodyL .~ ma
-      & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr (MaryValue mempty ma)]
+      & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr (fromMaryValue $ MaryValue mempty ma)]

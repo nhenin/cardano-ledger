@@ -34,7 +34,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
-import Cardano.Ledger.Mary.Value (MaryValue)
+import Cardano.Ledger.Mary.Value (MaryValueRepresentation)
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), dataToBinaryData)
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..), plutusLanguage)
 import Cardano.Ledger.State (UTxO (..))
@@ -90,7 +90,7 @@ datumEx = Datum . dataToBinaryData . Data . PV1.I $ 123
 inlineDatumOutput ::
   forall era.
   ( BabbageEraTxOut era
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   ) =>
   TxOut era
 inlineDatumOutput =
@@ -116,7 +116,7 @@ inputWithRefScript = mkTxInPartial genesisId 4
 exampleUTxO ::
   ( BabbageEraTxOut era
   , EraPlutusTxInfo 'PlutusV2 era
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   ) =>
   UTxO era
 exampleUTxO =
@@ -195,7 +195,7 @@ successfulTranslation ::
   ( BabbageEraTxOut era
   , EraPlutusTxInfo l era
   , EraPlutusTxInfo 'PlutusV2 era
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   ) =>
   SLanguage l ->
   Tx TopTx era ->
@@ -220,7 +220,7 @@ expectTranslationError ::
   ( BabbageEraTxOut era
   , EraPlutusTxInfo l era
   , EraPlutusTxInfo 'PlutusV2 era
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   ) =>
   SLanguage l ->
   Tx TopTx era ->
@@ -245,7 +245,7 @@ expectV1TranslationError ::
   ( BabbageEraTxOut era
   , EraPlutusTxInfo 'PlutusV1 era
   , EraPlutusTxInfo 'PlutusV2 era
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   ) =>
   Tx TopTx era ->
   ContextError era ->
@@ -265,7 +265,7 @@ translatedOutputEx1 ::
   forall era.
   ( BabbageEraTxOut era
   , Show (ContextError era)
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
   PV2.TxOut
@@ -277,7 +277,7 @@ translatedOutputEx2 ::
   forall era.
   ( BabbageEraTxOut era
   , EraPlutusTxInfo 'PlutusV2 era
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   , Inject (BabbageContextError era) (ContextError era)
   ) =>
   PV2.TxOut
@@ -289,7 +289,7 @@ txInfoSpecV1 ::
   forall era.
   ( EraTx era
   , BabbageEraTxBody era
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   , EraPlutusTxInfo 'PlutusV1 era
   , EraPlutusTxInfo 'PlutusV2 era
   , Inject (BabbageContextError era) (ContextError era)
@@ -324,7 +324,7 @@ txInfoSpec ::
   , EraPlutusTxInfo l era
   , EraPlutusTxInfo 'PlutusV2 era
   , BabbageEraTxBody era
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   , Inject (BabbageContextError era) (ContextError era)
   , Show (PlutusTxInInfo era l)
   , Eq (PlutusTxInInfo era l)
@@ -386,7 +386,7 @@ spec ::
   forall era.
   ( EraTx era
   , BabbageEraTxBody era
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   , Inject (BabbageContextError era) (ContextError era)
   , EraPlutusTxInfo 'PlutusV1 era
   , EraPlutusTxInfo 'PlutusV2 era

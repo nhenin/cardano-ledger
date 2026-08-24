@@ -51,7 +51,7 @@ import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure (..))
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..))
-import Cardano.Ledger.Mary.Value (MaryValue (..))
+import Cardano.Ledger.Mary.Value (MaryValueRepresentation (..))
 import Cardano.Ledger.Plutus.CostModels (CostModelsUpdate (..), mkCostModels, updateCostModels)
 import Cardano.Ledger.Plutus.Data (
   Data (..),
@@ -127,7 +127,7 @@ exampleConwayBasedTopTx ::
   , EraPlutusTxInfo 'PlutusV1 era
   , EraPlutusTxInfo 'PlutusV2 era
   , EraPlutusTxInfo 'PlutusV3 era
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   ) =>
   Tx TopTx era
 exampleConwayBasedTopTx =
@@ -141,7 +141,7 @@ exampleConwayBasedTx ::
   , EraPlutusTxInfo 'PlutusV1 era
   , EraPlutusTxInfo 'PlutusV2 era
   , EraPlutusTxInfo 'PlutusV3 era
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   , Typeable l
   ) =>
   Tx l era
@@ -153,7 +153,7 @@ addConwayBasedTxFeatures ::
   forall era l.
   ( EraTx era
   , ConwayEraTxBody era
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   , EraPlutusTxInfo PlutusV3 era
   , AlonzoEraTxAuxData era
   , AlonzoEraTxWits era
@@ -178,7 +178,7 @@ addConwayBasedTxFeatures tx =
       <>~ StrictSeq.fromList
         [ mkBasicTxOut
             (mkAddr examplePayKey exampleStakeKey)
-            (exampleMultiAssetValue 2)
+            (fromMaryValue $ exampleMultiAssetValue 2)
             & datumTxOutL .~ Datum (dataToBinaryData exampleDatum)
             & referenceScriptTxOutL .~ SJust (alwaysSucceeds @'PlutusV3 3)
         ]
