@@ -43,8 +43,10 @@ import Cardano.Ledger.Dijkstra.Era (
 import Cardano.Ledger.Dijkstra.Rules.Utxo (
   DijkstraUtxoPredFailure (..),
   conwayToDijkstraUtxoPredFailure,
+  validateOutputCapacityDeposit,
  )
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody)
+import Cardano.Ledger.Dijkstra.TxOut (DijkstraEraTxOut (..))
 import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.LedgerState (UTxOState, utxosDonationL, utxosUtxo)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -93,9 +95,9 @@ data DijkstraSubUtxoPredFailure era
       (Mismatch RelEQ Network)
   | -- | slot number outside consensus forecast range
     SubOutsideForecast SlotNo
-  | -- | list of supplied transaction outputs that are too small,
-    -- together with the minimum value for the given output.
-    SubBabbageOutputTooSmallUTxO (NonEmpty (TxOut era, Coin))
+  | -- | outputs whose capacity deposit is not exactly the required @M(o)@,
+    -- together with the supplied\/expected mismatch.
+    SubIncorrectCapacityDepositUTxO (NonEmpty (TxOut era, Mismatch RelEQ Coin))
   deriving (Generic)
 
 deriving stock instance
@@ -190,6 +192,7 @@ instance
   , EraStake era
   , EraCertState era
   , DijkstraEraTxBody era
+  , DijkstraEraTxOut era
   , AlonzoEraTxWits era
   , ConwayEraGov era
   , EraRule "SUBUTXO" era ~ SUBUTXO era
@@ -197,6 +200,7 @@ instance
   , InjectRuleFailure "SUBUTXO" Allegra.AllegraUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" Alonzo.AlonzoUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" Babbage.BabbageUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" DijkstraSubUtxoPredFailure era
   ) =>
   STS (SUBUTXO era)
   where
@@ -214,13 +218,14 @@ dijkstraSubUtxoTransition ::
   ( EraTx era
   , EraStake era
   , DijkstraEraTxBody era
+  , DijkstraEraTxOut era
   , AlonzoEraTxWits era
   , STS (EraRule "SUBUTXO" era)
   , EraRule "SUBUTXO" era ~ SUBUTXO era
   , InjectRuleFailure "SUBUTXO" Shelley.ShelleyUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" Allegra.AllegraUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" Alonzo.AlonzoUtxoPredFailure era
-  , InjectRuleFailure "SUBUTXO" Babbage.BabbageUtxoPredFailure era
+  , InjectRuleFailure "SUBUTXO" DijkstraSubUtxoPredFailure era
   ) =>
   TransitionRule (EraRule "SUBUTXO" era)
 dijkstraSubUtxoTransition = do
@@ -249,7 +254,7 @@ dijkstraSubUtxoTransition = do
 
   runTestOnSignal $ Shelley.validateOutputBootAddrAttrsTooBig allOutputs
 
-  runTestOnSignal $ Babbage.validateOutputTooSmallUTxO pp allSizedOutputs
+  runTestOnSignal $ validateOutputCapacityDeposit SubIncorrectCapacityDepositUTxO pp allSizedOutputs
 
   netId <- liftSTS $ asks networkId
   runTestOnSignal $ Shelley.validateWrongNetwork netId allOutputs
@@ -281,7 +286,7 @@ instance
       SubOutputTooBigUTxO outs -> Sum (SubOutputTooBigUTxO @era) 7 !> To outs
       SubWrongNetworkInTxBody mm -> Sum SubWrongNetworkInTxBody 8 !> To mm
       SubOutsideForecast a -> Sum SubOutsideForecast 9 !> To a
-      SubBabbageOutputTooSmallUTxO x -> Sum SubBabbageOutputTooSmallUTxO 10 !> To x
+      SubIncorrectCapacityDepositUTxO x -> Sum SubIncorrectCapacityDepositUTxO 11 !> To x
 
 instance
   ( Era era
@@ -301,7 +306,7 @@ instance
     7 -> SumD SubOutputTooBigUTxO <! From
     8 -> SumD SubWrongNetworkInTxBody <! From
     9 -> SumD SubOutsideForecast <! From
-    10 -> SumD SubBabbageOutputTooSmallUTxO <! From
+    11 -> SumD SubIncorrectCapacityDepositUTxO <! From
     n -> Invalid n
 
 dijkstraUtxoToDijkstraSubUtxoPredFailure ::
@@ -326,7 +331,7 @@ dijkstraUtxoToDijkstraSubUtxoPredFailure = \case
   TooManyCollateralInputs _ -> error "Impossible: `TooManyCollateralInputs` for SUBUTXO"
   NoCollateralInputs -> error "Impossible: `NoCollateralInputs` for SUBUTXO"
   IncorrectTotalCollateralField _ _ -> error "Impossible: `IncorrectTotalCollateralField` for SUBUTXO"
-  BabbageOutputTooSmallUTxO outs -> SubBabbageOutputTooSmallUTxO outs
+  IncorrectCapacityDepositUTxO outs -> SubIncorrectCapacityDepositUTxO outs
   BabbageNonDisjointRefInputs _ -> error "Impossible: `BabbageNonDisjointRefInputs` for SUBUTXO"
   PtrPresentInCollateralReturn _ -> error "Impossible: `PtrPresentInCollateralReturn` for SUBUTXO"
   WithdrawalsExceedAccountBalance _ -> error "Impossible: `WithdrawalsExceedAccountBalance` for SUBUTXO"

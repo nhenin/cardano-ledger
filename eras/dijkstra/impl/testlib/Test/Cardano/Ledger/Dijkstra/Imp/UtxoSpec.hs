@@ -18,6 +18,7 @@ import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Mary.Value (
   AssetName,
   MaryValue (..),
+  MaryValueRepresentation (..),
   MultiAsset,
   PolicyID,
   multiAssetFromList,
@@ -196,7 +197,7 @@ spec = describe "UTXO" $ do
               <> ((2 :: Int) <×> dRepDeposit)
               <> topDDAmount
               <> subDDAmount
-          expected = MaryValue expectedCoin expectedBurned
+          expected = fromMaryValue (MaryValue expectedCoin expectedBurned)
       pp <- getsPParams id
       pState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certPStateL
       produced pp pState (topTx ^. bodyTxL) `shouldBe` expected

@@ -50,6 +50,7 @@ library
     Cardano.Ledger.Dijkstra.TxOut
     Cardano.Ledger.Dijkstra.TxWits
     Cardano.Ledger.Dijkstra.UTxO
+    Cardano.Ledger.Dijkstra.Assets
 
   other-modules:
     Cardano.Ledger.Dijkstra.Forecast
@@ -125,6 +126,7 @@ library
     containers,
     data-default,
     deepseq,
+    groups,
     mempack,
     microlens,
     nothunks,

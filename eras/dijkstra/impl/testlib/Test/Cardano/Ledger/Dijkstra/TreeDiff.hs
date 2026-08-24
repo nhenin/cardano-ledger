@@ -22,8 +22,10 @@ import Cardano.Crypto.Leios (LeiosCert (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Binary (EncCBOR (..), FixedSizeCodec (..), natVersion, serialize')
+import Cardano.Ledger.Compactible (CompactForm)
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra (DijkstraEra)
+import Cardano.Ledger.Dijkstra.Assets (Assets (..), CompactForm (..))
 import Cardano.Ledger.Dijkstra.BlockBody (PerasCert)
 import Cardano.Ledger.Dijkstra.BlockBody.Internal (DijkstraBlockBodyRaw)
 import Cardano.Ledger.Dijkstra.Core (
@@ -40,6 +42,7 @@ import Cardano.Ledger.Dijkstra.Core (
   EraTxCert (..),
   EraTxOut (..),
   PlutusScript,
+  Script,
   TopTx,
   Value,
  )
@@ -56,11 +59,25 @@ import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraTxBodyRaw (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
+import Cardano.Ledger.Dijkstra.TxOut (DijkstraTxOut)
 import Control.State.Transition (STS (..))
 import Data.Functor.Identity (Identity)
 import qualified Data.TreeDiff.OMap as OMap
 import Test.Cardano.Ledger.Conway.TreeDiff (Expr (..), ToExpr)
 import Test.Cardano.Ledger.TreeDiff (HexBytes (..), ToExpr (..))
+
+-- Value
+deriving newtype instance ToExpr Assets
+
+deriving newtype instance ToExpr (CompactForm Assets)
+
+-- TxOut
+instance
+  ( Era era
+  , ToExpr (CompactForm (Value era))
+  , ToExpr (Script era)
+  ) =>
+  ToExpr (DijkstraTxOut era)
 
 instance
   (forall a b. (ToExpr a, ToExpr b) => ToExpr (f a b)) =>

@@ -28,6 +28,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra (ApplyTxError (DijkstraApplyTxError), DijkstraEra)
+import Cardano.Ledger.Dijkstra.Assets (Assets (..), CompactForm (..))
 import Cardano.Ledger.Dijkstra.BlockBody (PerasCert (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
@@ -42,8 +43,10 @@ import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
+import Cardano.Ledger.Dijkstra.TxOut (DijkstraTxOut, mkDijkstraTxOut)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
+import Cardano.Ledger.Val (Val)
 import Data.Functor.Identity (Identity)
 import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
@@ -54,6 +57,28 @@ import Test.Cardano.Ledger.Allegra.Arbitrary (maxTimelockDepth)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Arbitrary (sizedNativeScriptGens)
+
+instance
+  ( EraScript era
+  , Val (Value era)
+  , Arbitrary (Value era)
+  , Arbitrary (Script era)
+  ) =>
+  Arbitrary (DijkstraTxOut era)
+  where
+  arbitrary =
+    mkDijkstraTxOut
+      <$> arbitrary
+      <*> scale (`div` 15) arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+
+instance Arbitrary Assets where
+  arbitrary = Assets <$> arbitrary
+
+instance Arbitrary (CompactForm Assets) where
+  arbitrary = CompactAssets <$> arbitrary
 
 instance Arbitrary (DijkstraPParams Identity DijkstraEra) where
   arbitrary = genericArbitraryU
