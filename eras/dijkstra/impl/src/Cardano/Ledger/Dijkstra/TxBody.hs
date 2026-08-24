@@ -126,11 +126,12 @@ import Cardano.Ledger.Conway.TxBody (
  )
 import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Dijkstra.Assets (Assets (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceIntervals (..), DijkstraPlutusPurpose (..))
 import Cardano.Ledger.Dijkstra.TxOut ()
 import Cardano.Ledger.Keys (HasKeyRole (..))
-import Cardano.Ledger.Mary.Value (MultiAsset)
+import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset)
 import Cardano.Ledger.MemoBytes (
   EqRaw,
   Mem,
@@ -1151,6 +1152,11 @@ instance
   where
   mintTxBodyL = memoRawTypeL @DijkstraEra . mintDijkstraTxBodyRawL
   {-# INLINE mintTxBodyL #-}
+
+  -- The minted quantities viewed as a value: an explicit Assets wrap — the
+  -- default is gated on the pre-Dijkstra merged-value representation.
+  mintValueTxBodyF = to (\txBody -> Assets (MaryValue mempty (txBody ^. mintTxBodyL)))
+  {-# INLINE mintValueTxBodyF #-}
 
 collateralInputsDijkstraTxBodyRawL :: Lens' (DijkstraTxBodyRaw TopTx era) (Set TxIn)
 collateralInputsDijkstraTxBodyRawL =
