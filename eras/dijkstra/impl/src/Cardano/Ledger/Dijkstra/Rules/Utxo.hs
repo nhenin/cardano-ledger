@@ -25,6 +25,7 @@ module Cardano.Ledger.Dijkstra.Rules.Utxo (
   DijkstraUtxoEnv (..),
   DijkstraUtxoPredFailure (..),
   conwayToDijkstraUtxoPredFailure,
+  validateOutputCapacityDeposit,
 ) where
 
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
@@ -45,6 +46,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
+  Sized,
   sizedValue,
  )
 import Cardano.Ledger.Binary.Coders (
@@ -64,6 +66,7 @@ import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, UTXO)
 import Cardano.Ledger.Dijkstra.Rules.Utxos ()
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
+import Cardano.Ledger.Dijkstra.TxOut (DijkstraEraTxOut (..))
 import Cardano.Ledger.Dijkstra.UTxO (dijkstraConsumed)
 import Cardano.Ledger.Plutus (OrdExUnits)
 import Cardano.Ledger.Rules.ValidationMode (Test, failOnJustStatic, runTest, runTestOnSignal)
@@ -80,15 +83,18 @@ import Control.State.Transition.Extended (
   STS (..),
   TRC (..),
   TransitionRule,
+  failureOnNonEmpty,
   failureOnNonEmptyMap,
   judgmentContext,
   liftSTS,
   trans,
   validate,
  )
+import Data.Foldable (toList)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (mapMaybe)
 import qualified Data.OMap.Strict as OMap
 import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word16, Word32)
@@ -156,9 +162,10 @@ data DijkstraUtxoPredFailure era
       DeltaCoin
       -- | collateral amount declared in transaction body
       Coin
-  | -- | list of supplied transaction outputs that are too small,
-    -- together with the minimum value for the given output.
-    BabbageOutputTooSmallUTxO (NonEmpty (TxOut era, Coin))
+  | -- | outputs whose capacity deposit is not exactly the required
+    -- @M(o)@, together with the supplied\/expected mismatch. The deposit is
+    -- a tariff, not a floor: over-funding is as invalid as under-funding.
+    IncorrectCapacityDepositUTxO (NonEmpty (TxOut era, Mismatch RelEQ Coin))
   | -- | TxIns that appear in both inputs and reference inputs
     BabbageNonDisjointRefInputs (NonEmpty TxIn)
   | PtrPresentInCollateralReturn (TxOut era)
@@ -328,11 +335,76 @@ validateValueNotConservedUTxO pp utxo pState txBody =
     consumedValue = dijkstraConsumed pp utxo txBody
     producedValue = produced pp pState txBody
 
+-- | Dijkstra moves the minimum-ada requirement out of the value: every
+-- created output must carry a capacity deposit equal to /exactly/ the
+-- unchanged requirement @M(o)@. The deposit is a tariff for the capacity the
+-- output occupies, not a floor: over-funding would park application ada in
+-- the operational field and desynchronise the reserve identity
+-- @B(t) = \sum M(o)@, so it is rejected like under-funding. Application ada
+-- inside the value is unconstrained and may be zero.
+--
+-- The equation is well posed: @M(o)@ prices the actual serialised bytes of
+-- the output, and for every realistic tariff the deposit's own CBOR encoding
+-- has a constant width (5 bytes for any value in @[65536, 2^32-1]@, and
+-- @M(o) >= 160 * coinsPerUTxOByte@ keeps it in that band), so @M(o)@ does
+-- not depend on the deposit it constrains.
+--
+-- Positivity of the multi-asset quantities in the value needs no check
+-- here: at this era's protocol version deserialisation already rejects
+-- zero and negative quantities, and the compact representation cannot
+-- express them.
+validateOutputCapacityDeposit ::
+  (DijkstraEraTxOut era, Foldable f) =>
+  (NonEmpty (TxOut era, Mismatch RelEQ Coin) -> failure) ->
+  PParams era ->
+  f (Sized (TxOut era)) ->
+  Test failure
+validateOutputCapacityDeposit mkIncorrectDepositFailure pparams createdOutputs =
+  failureOnNonEmpty (misfundedOutputs pparams createdOutputs) mkIncorrectDepositFailure
+
+-- | The created outputs whose capacity deposit differs from the required
+-- @M(o)@, each paired with its supplied\/expected mismatch.
+misfundedOutputs ::
+  (DijkstraEraTxOut era, Foldable f) =>
+  PParams era ->
+  f (Sized (TxOut era)) ->
+  [(TxOut era, Mismatch RelEQ Coin)]
+misfundedOutputs pparams createdOutputs =
+  mapMaybe (misfundedOutput pparams) (toList createdOutputs)
+
+-- | Judge one created output against the tariff it must fund.
+misfundedOutput ::
+  DijkstraEraTxOut era =>
+  PParams era ->
+  Sized (TxOut era) ->
+  Maybe (TxOut era, Mismatch RelEQ Coin)
+misfundedOutput pparams sizedTxOut =
+  depositMismatch (sizedValue sizedTxOut) (getMinCoinSizedTxOut pparams sizedTxOut)
+
+-- | 'Nothing' when the funded deposit is exactly the required one; the
+-- supplied\/expected mismatch otherwise.
+depositMismatch ::
+  DijkstraEraTxOut era =>
+  TxOut era ->
+  Coin ->
+  Maybe (TxOut era, Mismatch RelEQ Coin)
+depositMismatch txOut requiredDeposit
+  | txOut ^. capacityDepositTxOutL == requiredDeposit = Nothing
+  | otherwise =
+      Just
+        ( txOut
+        , Mismatch
+            { mismatchSupplied = txOut ^. capacityDepositTxOutL
+            , mismatchExpected = requiredDeposit
+            }
+        )
+
 dijkstraUtxoTransition ::
   forall era.
   ( EraUTxO era
   , EraCertState era
   , DijkstraEraTxBody era
+  , DijkstraEraTxOut era
   , AlonzoEraTx era
   , EraStake era
   , InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure era
@@ -394,9 +466,9 @@ dijkstraUtxoTransition = do
   {- consumed pp utxo₀ txb = produced pp certState txb -}
   runTest $ validateValueNotConservedUTxO pp originalUtxo originalPState txBody
 
-  {- ∀ txout ∈ allOuts txb, getValue txout ≥ inject (serSize txout * coinsPerUTxOByte pp) -}
+  {- ∀ txout ∈ allOuts txb, capacityDeposit txout = (160 + serSize txout) * coinsPerUTxOByte pp -}
   let allSizedOutputs = txBody ^. allSizedOutputsTxBodyF
-  runTest $ Babbage.validateOutputTooSmallUTxO pp allSizedOutputs
+  runTest $ validateOutputCapacityDeposit IncorrectCapacityDepositUTxO pp allSizedOutputs
 
   let allOutputs = fmap sizedValue allSizedOutputs
   {- ∀ txout ∈ allOuts txb, serSize (getValue txout) ≤ maxValSize pp -}
@@ -461,6 +533,7 @@ instance
   , State (EraRule "UTXOS" era) ~ ()
   , Signal (EraRule "UTXOS" era) ~ StAnnTx TopTx era
   , EraCertState era
+  , DijkstraEraTxOut era
   , EraRule "UTXO" era ~ UTXO era
   , SafeToHash (TxWits era)
   ) =>
@@ -522,10 +595,10 @@ instance
       TooManyCollateralInputs mm -> Sum TooManyCollateralInputs 17 !> To mm
       NoCollateralInputs -> Sum NoCollateralInputs 18
       IncorrectTotalCollateralField c1 c2 -> Sum IncorrectTotalCollateralField 19 !> To c1 !> To c2
-      BabbageOutputTooSmallUTxO x -> Sum BabbageOutputTooSmallUTxO 20 !> To x
       BabbageNonDisjointRefInputs x -> Sum BabbageNonDisjointRefInputs 21 !> To x
       PtrPresentInCollateralReturn x -> Sum PtrPresentInCollateralReturn 22 !> To x
       WithdrawalsExceedAccountBalance mm -> Sum WithdrawalsExceedAccountBalance 24 !> To mm
+      IncorrectCapacityDepositUTxO x -> Sum IncorrectCapacityDepositUTxO 25 !> To x
 
 instance
   ( Era era
@@ -556,10 +629,10 @@ instance
     17 -> SumD TooManyCollateralInputs <! From
     18 -> SumD NoCollateralInputs
     19 -> SumD IncorrectTotalCollateralField <! From <! From
-    20 -> SumD BabbageOutputTooSmallUTxO <! From
     21 -> SumD BabbageNonDisjointRefInputs <! From
     22 -> SumD PtrPresentInCollateralReturn <! From
     24 -> SumD WithdrawalsExceedAccountBalance <! From
+    25 -> SumD IncorrectCapacityDepositUTxO <! From
     n -> Invalid n
 
 -- =====================================================
@@ -591,5 +664,7 @@ conwayToDijkstraUtxoPredFailure = \case
   Conway.TooManyCollateralInputs m -> TooManyCollateralInputs m
   Conway.NoCollateralInputs -> NoCollateralInputs
   Conway.IncorrectTotalCollateralField dc c -> IncorrectTotalCollateralField dc c
-  Conway.BabbageOutputTooSmallUTxO x -> BabbageOutputTooSmallUTxO x
+  Conway.BabbageOutputTooSmallUTxO _ ->
+    error
+      "Impossible: `BabbageOutputTooSmallUTxO` for UTXO (Dijkstra does not run the merged-value min-ada validator)"
   Conway.BabbageNonDisjointRefInputs txin -> BabbageNonDisjointRefInputs txin
