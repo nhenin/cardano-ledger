@@ -153,7 +153,7 @@ transTxOutV2 txOutSource txOut = do
   case transAddr (txOut ^. addrTxOutL) of
     Nothing -> Left $ inject $ ByronTxOutInContext @era txOutSource
     Just addr ->
-      Right (PV2.TxOut addr (Alonzo.transValue (toMaryValue val)) datum referenceScript)
+      Right (PV2.TxOut addr (Alonzo.transValue (toMaryRepresentation val)) datum referenceScript)
 
 -- | Given a TxIn, look it up in the UTxO. If it exists, translate it to the V1 context
 transTxInInfoV1 ::

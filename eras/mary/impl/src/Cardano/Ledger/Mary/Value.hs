@@ -225,21 +225,21 @@ instance Inject Coin MaryValue where
 -- conversions must be total and mutually inverse:
 --
 -- @
---   toMaryValue . fromMaryValue = id
---   fromMaryValue . toMaryValue = id
+--   toMaryRepresentation . fromMaryRepresentation = id
+--   fromMaryRepresentation . toMaryRepresentation = id
 -- @
 --
--- Era-generic code uses 'fromMaryValue' where it builds a value in the
--- merged pre-Dijkstra shape, and 'toMaryValue' where it inspects one; an era
+-- Era-generic code uses 'fromMaryRepresentation' where it builds a value in the
+-- merged pre-Dijkstra shape, and 'toMaryRepresentation' where it inspects one; an era
 -- with different value semantics (Dijkstra's @Assets@) makes both crossings
 -- explicit in its instance.
 class Val v => MaryValueRepresentation v where
-  fromMaryValue :: MaryValue -> v
-  toMaryValue :: v -> MaryValue
+  fromMaryRepresentation :: MaryValue -> v
+  toMaryRepresentation :: v -> MaryValue
 
 instance MaryValueRepresentation MaryValue where
-  fromMaryValue = id
-  toMaryValue = id
+  fromMaryRepresentation = id
+  toMaryRepresentation = id
 
 instance Val MaryValue where
   s <×> MaryValue c (MultiAsset m) =

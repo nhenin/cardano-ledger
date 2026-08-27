@@ -178,7 +178,7 @@ addConwayBasedTxFeatures tx =
       <>~ StrictSeq.fromList
         [ mkBasicTxOut
             (mkAddr examplePayKey exampleStakeKey)
-            (fromMaryValue $ exampleMultiAssetValue 2)
+            (fromMaryRepresentation $ exampleMultiAssetValue 2)
             & datumTxOutL .~ Datum (dataToBinaryData exampleDatum)
             & referenceScriptTxOutL .~ SJust (alwaysSucceeds @'PlutusV3 3)
         ]

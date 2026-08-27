@@ -36,6 +36,7 @@ import Cardano.Ledger.Dijkstra.Tx ()
 import Cardano.Ledger.Dijkstra.TxAuxData ()
 import Cardano.Ledger.Dijkstra.TxBody (upgradeGovAction, upgradeProposals)
 import Cardano.Ledger.Dijkstra.TxWits ()
+import Cardano.Ledger.Dijkstra.UTxO.Translation (translateUTxO)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
@@ -211,16 +212,40 @@ instance TranslateEra DijkstraEra ConwayGovState where
 
 instance TranslateEra DijkstraEra UTxOState where
   translateEra ctxt us =
-    pure
-      UTxOState
-        { utxosUtxo = translateEra' ctxt $ utxosUtxo us
-        , utxosDeposited = utxosDeposited us
-        , utxosFees = utxosFees us
-        , utxosGovState = translateEra' ctxt $ utxosGovState us
-        , utxosInstantStake = coerce $ utxosInstantStake us
-        , utxosDonation = utxosDonation us
-        }
+    pure $ translateUTxOState (translateEra' ctxt (utxosGovState us)) us
 
-instance TranslateEra DijkstraEra UTxO where
-  translateEra _ctxt utxo =
-    pure $ UTxO $ upgradeTxOut `Map.map` unUTxO utxo
+-- | The era-boundary translation of the UTxO state, assembled around the
+-- translated UTxO set, which two fields share: the set itself, and the
+-- instant-stake snapshot rebuilt from it. Rebuilt rather than coerced:
+-- translation moves @M(o)@ out of every value, so the Conway snapshot's
+-- per-credential sums no longer match what incremental updates will add and
+-- delete. Capacity deposits therefore do not count toward instant stake — a
+-- recorded, revisitable policy. The governance state arrives already
+-- translated: it prices the translation with the new era's coinsPerUTxOByte.
+translateUTxOState ::
+  GovState DijkstraEra ->
+  UTxOState ConwayEra ->
+  UTxOState DijkstraEra
+translateUTxOState translatedGovState conwayUTxOState =
+  translatedUTxOStateAround
+    translatedGovState
+    conwayUTxOState
+    ( translateUTxO
+        (translatedGovState ^. curPParamsGovStateL . ppCoinsPerUTxOByteL)
+        (utxosUtxo conwayUTxOState)
+    )
+
+translatedUTxOStateAround ::
+  GovState DijkstraEra ->
+  UTxOState ConwayEra ->
+  UTxO DijkstraEra ->
+  UTxOState DijkstraEra
+translatedUTxOStateAround translatedGovState conwayUTxOState translatedUTxOSet =
+  UTxOState
+    { utxosUtxo = translatedUTxOSet
+    , utxosDeposited = utxosDeposited conwayUTxOState
+    , utxosFees = utxosFees conwayUTxOState
+    , utxosGovState = translatedGovState
+    , utxosInstantStake = addInstantStake translatedUTxOSet mempty
+    , utxosDonation = utxosDonation conwayUTxOState
+    }

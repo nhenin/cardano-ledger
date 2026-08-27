@@ -28,7 +28,6 @@ import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra (ApplyTxError (DijkstraApplyTxError), DijkstraEra)
-import Cardano.Ledger.Dijkstra.Assets (Assets (..), CompactForm (..))
 import Cardano.Ledger.Dijkstra.BlockBody (PerasCert (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Genesis (DijkstraGenesis (..))
@@ -56,6 +55,8 @@ import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Allegra.Arbitrary (maxTimelockDepth)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
+import Test.Cardano.Ledger.Dijkstra.Assets ()
+import Test.Cardano.Ledger.Dijkstra.TxOut.CapacityDeposit ()
 import Test.Cardano.Ledger.Shelley.Arbitrary (sizedNativeScriptGens)
 
 instance
@@ -73,12 +74,6 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-
-instance Arbitrary Assets where
-  arbitrary = Assets <$> arbitrary
-
-instance Arbitrary (CompactForm Assets) where
-  arbitrary = CompactAssets <$> arbitrary
 
 instance Arbitrary (DijkstraPParams Identity DijkstraEra) where
   arbitrary = genericArbitraryU

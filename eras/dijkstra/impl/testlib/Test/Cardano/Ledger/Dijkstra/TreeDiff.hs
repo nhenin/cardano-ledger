@@ -25,7 +25,6 @@ import Cardano.Ledger.Binary (EncCBOR (..), FixedSizeCodec (..), natVersion, ser
 import Cardano.Ledger.Compactible (CompactForm)
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra (DijkstraEra)
-import Cardano.Ledger.Dijkstra.Assets (Assets (..), CompactForm (..))
 import Cardano.Ledger.Dijkstra.BlockBody (PerasCert)
 import Cardano.Ledger.Dijkstra.BlockBody.Internal (DijkstraBlockBodyRaw)
 import Cardano.Ledger.Dijkstra.Core (
@@ -64,12 +63,9 @@ import Control.State.Transition (STS (..))
 import Data.Functor.Identity (Identity)
 import qualified Data.TreeDiff.OMap as OMap
 import Test.Cardano.Ledger.Conway.TreeDiff (Expr (..), ToExpr)
+import Test.Cardano.Ledger.Dijkstra.Assets ()
+import Test.Cardano.Ledger.Dijkstra.TxOut.CapacityDeposit ()
 import Test.Cardano.Ledger.TreeDiff (HexBytes (..), ToExpr (..))
-
--- Value
-deriving newtype instance ToExpr Assets
-
-deriving newtype instance ToExpr (CompactForm Assets)
 
 -- TxOut
 instance

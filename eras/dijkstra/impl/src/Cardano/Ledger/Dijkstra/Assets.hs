@@ -80,5 +80,5 @@ deriving newtype instance Val Assets
 -- era-generic code builds and inspects values in the 'MaryValue' shape, and
 -- both crossings are visible wraps.
 instance MaryValueRepresentation Assets where
-  fromMaryValue = Assets
-  toMaryValue = unAssets
+  fromMaryRepresentation = Assets
+  toMaryRepresentation = unAssets

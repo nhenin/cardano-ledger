@@ -219,7 +219,7 @@ addAlonzoBasedTxFeatureExamples tx =
       <>~ StrictSeq.fromList
         [ mkBasicTxOut
             (mkAddr examplePayKey exampleStakeKey)
-            (fromMaryValue $ exampleMultiAssetValue 3)
+            (fromMaryRepresentation $ exampleMultiAssetValue 3)
             & dataHashTxOutL .~ SJust (mkDummySafeHash 1)
         ]
     & bodyTxL . scriptIntegrityHashTxBodyL .~ SJust (mkDummySafeHash 42)

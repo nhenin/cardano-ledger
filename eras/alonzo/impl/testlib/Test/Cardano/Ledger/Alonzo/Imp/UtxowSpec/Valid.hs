@@ -123,7 +123,7 @@ spec = describe "Valid transactions" $ do
             txOut =
               mkBasicTxOut
                 (mkAddr alwaysSucceedsWithDatumHash StakeRefNull)
-                (fromMaryValue $ MaryValue amount mempty)
+                (fromMaryRepresentation $ MaryValue amount mempty)
                 & dataHashTxOutL .~ SJust datumHash
             txBody =
               mkBasicTxBody
@@ -190,7 +190,7 @@ alonzoToConwaySpec = do
             txOut =
               mkBasicTxOut
                 (mkAddr outputAddr StakeRefNull)
-                (fromMaryValue $ MaryValue mempty multiAsset)
+                (fromMaryRepresentation $ MaryValue mempty multiAsset)
             txBody =
               mkBasicTxBody
                 & inputsTxBodyL .~ fromList txIns

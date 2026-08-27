@@ -40,13 +40,15 @@ import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   SUBUTXO,
  )
+import Cardano.Ledger.Dijkstra.Rules.CapacityDeposit (validateOutputCapacityDeposit)
 import Cardano.Ledger.Dijkstra.Rules.Utxo (
   DijkstraUtxoPredFailure (..),
   conwayToDijkstraUtxoPredFailure,
-  validateOutputCapacityDeposit,
+  updateDijkstraUTxOAndInstantStake,
  )
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody)
-import Cardano.Ledger.Dijkstra.TxOut (DijkstraEraTxOut (..))
+import Cardano.Ledger.Dijkstra.TxOut (DijkstraEraTxOut (..), DijkstraTxOut)
+import Cardano.Ledger.Dijkstra.TxOut.CapacityDeposit (CapacityDeposit (..))
 import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.LedgerState (UTxOState, utxosDonationL, utxosUtxo)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -97,7 +99,10 @@ data DijkstraSubUtxoPredFailure era
     SubOutsideForecast SlotNo
   | -- | outputs whose capacity deposit is not exactly the required @M(o)@,
     -- together with the supplied\/expected mismatch.
-    SubIncorrectCapacityDepositUTxO (NonEmpty (TxOut era, Mismatch RelEQ Coin))
+    SubIncorrectCapacityDepositUTxO (NonEmpty (TxOut era, Mismatch RelEQ CapacityDeposit))
+  | -- | Implicit (merged-form) outputs whose total ada cannot cover the
+    -- tariff the entry-time restructuring will charge
+    SubImplicitOutputTooSmallUTxO (NonEmpty (TxOut era, Mismatch RelGTEQ Coin))
   deriving (Generic)
 
 deriving stock instance
@@ -193,6 +198,7 @@ instance
   , EraCertState era
   , DijkstraEraTxBody era
   , DijkstraEraTxOut era
+  , TxOut era ~ DijkstraTxOut era
   , AlonzoEraTxWits era
   , ConwayEraGov era
   , EraRule "SUBUTXO" era ~ SUBUTXO era
@@ -219,6 +225,7 @@ dijkstraSubUtxoTransition ::
   , EraStake era
   , DijkstraEraTxBody era
   , DijkstraEraTxOut era
+  , TxOut era ~ DijkstraTxOut era
   , AlonzoEraTxWits era
   , STS (EraRule "SUBUTXO" era)
   , EraRule "SUBUTXO" era ~ SUBUTXO era
@@ -254,7 +261,12 @@ dijkstraSubUtxoTransition = do
 
   runTestOnSignal $ Shelley.validateOutputBootAddrAttrsTooBig allOutputs
 
-  runTestOnSignal $ validateOutputCapacityDeposit SubIncorrectCapacityDepositUTxO pp allSizedOutputs
+  runTestOnSignal $
+    validateOutputCapacityDeposit
+      SubIncorrectCapacityDepositUTxO
+      SubImplicitOutputTooSmallUTxO
+      pp
+      allSizedOutputs
 
   netId <- liftSTS $ asks networkId
   runTestOnSignal $ Shelley.validateWrongNetwork netId allOutputs
@@ -262,9 +274,10 @@ dijkstraSubUtxoTransition = do
 
   case topTxIsPhase2Valid of
     Phase2Valid ->
-      Shelley.updateUTxOAndInstantStake
+      updateDijkstraUTxOAndInstantStake
+        pp
         txBody
-        (\a b -> tellEvent $ TxUTxODiff a b)
+        (\utxoDeleted utxoAdded -> tellEvent $ TxUTxODiff utxoDeleted utxoAdded)
         (utxoState & utxosDonationL <>~ txBody ^. treasuryDonationTxBodyL)
     Phase2Invalid ->
       pure utxoState
@@ -287,6 +300,7 @@ instance
       SubWrongNetworkInTxBody mm -> Sum SubWrongNetworkInTxBody 8 !> To mm
       SubOutsideForecast a -> Sum SubOutsideForecast 9 !> To a
       SubIncorrectCapacityDepositUTxO x -> Sum SubIncorrectCapacityDepositUTxO 11 !> To x
+      SubImplicitOutputTooSmallUTxO x -> Sum SubImplicitOutputTooSmallUTxO 12 !> To x
 
 instance
   ( Era era
@@ -307,6 +321,7 @@ instance
     8 -> SumD SubWrongNetworkInTxBody <! From
     9 -> SumD SubOutsideForecast <! From
     11 -> SumD SubIncorrectCapacityDepositUTxO <! From
+    12 -> SumD SubImplicitOutputTooSmallUTxO <! From
     n -> Invalid n
 
 dijkstraUtxoToDijkstraSubUtxoPredFailure ::
@@ -331,7 +346,8 @@ dijkstraUtxoToDijkstraSubUtxoPredFailure = \case
   TooManyCollateralInputs _ -> error "Impossible: `TooManyCollateralInputs` for SUBUTXO"
   NoCollateralInputs -> error "Impossible: `NoCollateralInputs` for SUBUTXO"
   IncorrectTotalCollateralField _ _ -> error "Impossible: `IncorrectTotalCollateralField` for SUBUTXO"
-  IncorrectCapacityDepositUTxO outs -> SubIncorrectCapacityDepositUTxO outs
+  IncorrectCapacityDepositUTxO misfundedOutputs -> SubIncorrectCapacityDepositUTxO misfundedOutputs
+  ImplicitOutputTooSmallUTxO underfundedOutputs -> SubImplicitOutputTooSmallUTxO underfundedOutputs
   BabbageNonDisjointRefInputs _ -> error "Impossible: `BabbageNonDisjointRefInputs` for SUBUTXO"
   PtrPresentInCollateralReturn _ -> error "Impossible: `PtrPresentInCollateralReturn` for SUBUTXO"
   WithdrawalsExceedAccountBalance _ -> error "Impossible: `WithdrawalsExceedAccountBalance` for SUBUTXO"
