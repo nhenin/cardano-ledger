@@ -1,0 +1,283 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
+{-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-pattern-binds #-}
+{-# OPTIONS_HADDOCK not-home #-}
+
+-- | Provides BlockBody internals
+--
+-- = Warning
+--
+-- This module is considered __internal__.
+--
+-- The contents of this module may change __in any way whatsoever__
+-- and __without any warning__ between minor versions of this package.
+module Cardano.Ledger.Dijkstra.BlockBody.Internal (
+  DijkstraBlockBody (DijkstraBlockBody, MkDijkstraBlockBody),
+  DijkstraBlockBodyRaw (..),
+  alignedValidFlags,
+  mkBasicBlockBodyDijkstra,
+  DijkstraEraBlockBody (..),
+  PerasCert (..),
+  PerasKey (..),
+  validatePerasCert,
+) where
+
+import Cardano.Crypto.Leios (LeiosCert)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsPhase2Valid (..))
+import Cardano.Ledger.BaseTypes (Nonce, ProtVer (..))
+import Cardano.Ledger.Binary (
+  Annotator (..),
+  DecCBOR (..),
+  EncCBOR,
+  decodeNonEmptySetLikeEnforceNoDuplicates,
+  decodeNullMaybe,
+  decodeNullStrictMaybe,
+  decodeRecordNamed,
+  decodeSeq,
+  encCBOR,
+  encodeListLen,
+  encodeNullMaybe,
+  encodeNullStrictMaybe,
+  serialize',
+ )
+import Cardano.Ledger.Core
+import Cardano.Ledger.Dijkstra.Era
+import Cardano.Ledger.Dijkstra.Tx (DijkstraTx, Tx (..), decodeDijkstraTopTx)
+import Cardano.Ledger.MemoBytes (
+  Mem,
+  MemoBytes,
+  MemoHashIndex,
+  Memoized (..),
+  getMemoBytesHash,
+  getMemoRawType,
+  lensMemoRawType,
+  mkMemoized,
+  mkMemoizedEra,
+ )
+import Cardano.Ledger.Orphans ()
+import Control.DeepSeq (NFData)
+import Control.Monad (forM_, unless)
+import Data.Array.Byte (ByteArray)
+import qualified Data.ByteString as BS
+import Data.Coerce (Coercible, coerce)
+import Data.Foldable (Foldable (..))
+import Data.IntSet (IntSet)
+import qualified Data.IntSet as IntSet
+import Data.Maybe.Strict (StrictMaybe (..))
+import qualified Data.Sequence as Seq
+import Data.Sequence.Strict (StrictSeq)
+import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Set.NonEmpty as NonEmptySet
+import Data.Typeable (Typeable)
+import Data.Word (Word16)
+import GHC.Generics (Generic)
+import Lens.Micro
+import NoThunks.Class (NoThunks)
+
+-- =================================================
+
+-- $BlockBody
+--
+-- * BlockBody
+--
+-- BlockBody provides an alternate way of formatting transactions in a block, in
+-- order to support segregated witnessing.
+
+data DijkstraBlockBodyRaw era = DijkstraBlockBodyRaw
+  { dbbrTxs :: !(StrictSeq (Tx TopTx era))
+  , dbbrLeiosCert :: !(StrictMaybe LeiosCert)
+  -- ^ Optional Leios certificate
+  , dbbrPerasCert :: !(StrictMaybe PerasCert)
+  -- ^ Optional Peras certificate
+  }
+  deriving (Generic)
+
+instance
+  (NFData (Tx TopTx era), NFData LeiosCert, NFData PerasCert) =>
+  NFData (DijkstraBlockBodyRaw era)
+
+type instance MemoHashIndex (DijkstraBlockBodyRaw era) = EraIndependentBlockBody
+
+instance EraBlockBody DijkstraEra where
+  type BlockBody DijkstraEra = DijkstraBlockBody DijkstraEra
+  mkBasicBlockBody = mkBasicBlockBodyDijkstra
+  txSeqBlockBodyL = lensMemoRawType @DijkstraEra dbbrTxs (\bb p -> bb {dbbrTxs = p})
+  hashBlockBody (MkDijkstraBlockBody m) = extractHash $ getMemoBytesHash m
+  blockBodySize (ProtVer v _) = BS.length . serialize' v . encCBOR
+
+mkBasicBlockBodyDijkstra :: forall era. AlonzoEraTx era => DijkstraBlockBody era
+mkBasicBlockBodyDijkstra =
+  mkMemoized (eraProtVerLow @era) $
+    DijkstraBlockBodyRaw mempty SNothing SNothing
+{-# INLINEABLE mkBasicBlockBodyDijkstra #-}
+
+-- | Dijkstra-specific extensions to 'EraBlockBody'
+class EraBlockBody era => DijkstraEraBlockBody era where
+  leiosCertBlockBodyL :: Lens' (BlockBody era) (StrictMaybe LeiosCert)
+  -- ^ Lens to access the optional Leios certificate in the block body
+
+  perasCertBlockBodyL :: Lens' (BlockBody era) (StrictMaybe PerasCert)
+  -- ^ Lens to access the optional Peras certificate in the block body
+
+instance DijkstraEraBlockBody DijkstraEra where
+  leiosCertBlockBodyL = lensMemoRawType @DijkstraEra dbbrLeiosCert (\bb c -> bb {dbbrLeiosCert = c})
+
+  perasCertBlockBodyL = lensMemoRawType @DijkstraEra dbbrPerasCert (\bb c -> bb {dbbrPerasCert = c})
+
+deriving instance (Typeable era, NoThunks (Tx TopTx era)) => NoThunks (DijkstraBlockBodyRaw era)
+
+deriving stock instance Show (Tx TopTx era) => Show (DijkstraBlockBodyRaw era)
+
+deriving stock instance Eq (Tx TopTx era) => Eq (DijkstraBlockBodyRaw era)
+
+newtype DijkstraBlockBody era = MkDijkstraBlockBody (MemoBytes (DijkstraBlockBodyRaw era))
+  deriving (Generic)
+
+deriving instance Eq (Tx TopTx era) => Eq (DijkstraBlockBody era)
+
+deriving instance Show (Tx TopTx era) => Show (DijkstraBlockBody era)
+
+deriving newtype instance
+  (NFData (Tx TopTx era), NFData PerasCert) => NFData (DijkstraBlockBody era)
+
+deriving newtype instance EncCBOR (DijkstraBlockBody era)
+
+instance Memoized (DijkstraBlockBody era) where
+  type RawType (DijkstraBlockBody era) = DijkstraBlockBodyRaw era
+
+pattern DijkstraBlockBody ::
+  AlonzoEraTx era =>
+  StrictSeq (Tx TopTx era) ->
+  StrictMaybe LeiosCert ->
+  StrictMaybe PerasCert ->
+  DijkstraBlockBody era
+pattern DijkstraBlockBody txs mbLeiosCert mbPerasCert <-
+  ( getMemoRawType ->
+      DijkstraBlockBodyRaw txs mbLeiosCert mbPerasCert
+    )
+  where
+    DijkstraBlockBody txs leiosCert perasCert =
+      mkMemoizedEra @DijkstraEra $
+        DijkstraBlockBodyRaw txs leiosCert perasCert
+
+{-# COMPLETE DijkstraBlockBody #-}
+
+--------------------------------------------------------------------------------
+-- Serialisation and hashing
+--------------------------------------------------------------------------------
+
+instance
+  ( AlonzoEraTx era
+  , EncCBOR (Tx TopTx era)
+  ) =>
+  EncCBOR (DijkstraBlockBodyRaw era)
+  where
+  encCBOR (DijkstraBlockBodyRaw txs mbLeiosCert mbPerasCert) =
+    encodeListLen 4
+      <> encodeNullMaybe encCBOR invalidIndices
+      <> encCBOR txs
+      <> encodeNullStrictMaybe encCBOR mbLeiosCert
+      <> encodeNullStrictMaybe encCBOR mbPerasCert
+    where
+      invalidIndices =
+        NonEmptySet.fromFoldable $
+          StrictSeq.findIndicesL (\tx -> tx ^. isPhase2ValidTxL == Phase2Invalid) txs
+
+instance
+  ( AlonzoEraTx era
+  , DecCBOR (Annotator (TxAuxData era))
+  , DecCBOR (Annotator (TxBody TopTx era))
+  , DecCBOR (Annotator (TxWits era))
+  , Coercible (DijkstraTx TopTx era) (Tx TopTx era)
+  ) =>
+  DecCBOR (Annotator (DijkstraBlockBodyRaw era))
+  where
+  decCBOR = decodeRecordNamed "DijkstraBlockBodyRaw" (const 4) $ do
+    let
+      decodeInvalidTxs =
+        decodeNonEmptySetLikeEnforceNoDuplicates
+          (IntSet.insert . fromIntegral @Word16 @Int)
+          (\x -> (IntSet.size x, x))
+          (decCBOR @Word16)
+
+    invalidTxs :: IntSet <- fold <$> decodeNullMaybe decodeInvalidTxs
+    txs <- decodeSeq (decodeDijkstraTopTx @era False)
+    mbLeiosCert <- decodeNullStrictMaybe decCBOR
+    mbPerasCert <- decodeNullStrictMaybe decCBOR
+
+    let txsLength = Seq.length txs
+        inRange x = 0 <= x && x < txsLength
+    forM_ (IntSet.toList invalidTxs) $ \i ->
+      unless (inRange i) . fail $
+        "index is out of range: " <> show i
+    let
+      setValidityFlag tx isPhase2Valid = set isPhase2ValidTxL isPhase2Valid <$> tx
+      validityFlags = alignedValidFlags txsLength invalidTxs
+      txsWithIsPhase2Valid = Seq.zipWith setValidityFlag (coerce txs) validityFlags
+    pure $
+      DijkstraBlockBodyRaw
+        <$> sequenceA (StrictSeq.forceToStrict txsWithIsPhase2Valid)
+        <*> pure mbLeiosCert
+        <*> pure mbPerasCert
+
+deriving via
+  Mem (DijkstraBlockBodyRaw era)
+  instance
+    ( AlonzoEraTx era
+    , Coercible (DijkstraTx TopTx era) (Tx TopTx era)
+    , DecCBOR (Annotator (TxAuxData era))
+    , DecCBOR (Annotator (TxBody TopTx era))
+    , DecCBOR (Annotator (TxWits era))
+    ) =>
+    DecCBOR (Annotator (DijkstraBlockBody era))
+
+--------------------------------------------------------------------------------
+-- Internal utility functions
+--------------------------------------------------------------------------------
+
+-- | Given the number of transactions, and the set of indices for which these
+-- transactions do not validate, create an aligned sequence of `IsPhase2Valid`
+-- flags.
+alignedValidFlags :: Int -> IntSet -> Seq.Seq IsPhase2Valid
+alignedValidFlags n invalidSet =
+  Seq.fromFunction n $ \i ->
+    if i `IntSet.notMember` invalidSet then Phase2Valid else Phase2Invalid
+
+-- | Placeholder for Peras certificates
+--
+-- NOTE: The real type will be brought from 'cardano-base' once it's ready.
+newtype PerasCert = PerasCert ByteArray
+  deriving (Eq, Ord, Show, Generic)
+  deriving newtype (EncCBOR, DecCBOR)
+
+instance NoThunks PerasCert
+
+instance NFData PerasCert
+
+-- | Placeholder for Peras public keys
+--
+-- NOTE: The real type will be brought from 'cardano-base' once it's ready.
+data PerasKey = PerasKey
+  deriving (Eq, Show, Generic, NoThunks)
+
+-- | Mocked-up Peras certificate validation routine
+--
+-- NOTE: this function will be replaced with the real implementation from
+-- 'cardano-base' once it's ready.
+validatePerasCert :: Nonce -> PerasKey -> PerasCert -> Bool
+validatePerasCert _ _ _ = True
