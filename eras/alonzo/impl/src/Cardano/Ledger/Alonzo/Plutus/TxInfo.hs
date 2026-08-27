@@ -285,7 +285,7 @@ transTxOut txOut = do
       dataHash = txOut ^. dataHashTxOutL
   address <- transAddr (txOut ^. addrTxOutL)
   pure $
-    PV1.TxOut address (transValue (toMaryValue val)) (transDataHash <$> strictMaybeToMaybe dataHash)
+    PV1.TxOut address (transValue (toMaryRepresentation val)) (transDataHash <$> strictMaybeToMaybe dataHash)
 
 transTxBodyId :: EraTxBody era => TxBody l era -> PV1.TxId
 transTxBodyId txBody = PV1.TxId (transSafeHash (hashAnnotated @_ @EraIndependentTxBody txBody))

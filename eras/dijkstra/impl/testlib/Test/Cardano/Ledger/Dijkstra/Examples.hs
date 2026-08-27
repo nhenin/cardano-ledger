@@ -75,7 +75,9 @@ import Cardano.Ledger.Dijkstra.TxBody (
   requiredTopLevelGuardsL,
   subTransactionsTxBodyL,
  )
-import Cardano.Ledger.Mary.Value (MaryValue (..))
+import Cardano.Ledger.Dijkstra.TxOut (DijkstraEraTxOut (..))
+import Cardano.Ledger.Dijkstra.TxOut.CapacityDeposit (CapacityDeposit (..))
+import Cardano.Ledger.Mary.Value (MaryValueRepresentation (..))
 import Cardano.Ledger.Plutus.Data (
   Data (..),
   Datum (..),
@@ -158,7 +160,8 @@ exampleDijkstraBasedTopTx ::
   forall era.
   ( AlonzoEraTx era
   , DijkstraEraTxBody era
-  , Value era ~ MaryValue
+  , DijkstraEraTxOut era
+  , MaryValueRepresentation (Value era)
   , DijkstraEraScript era
   , EraPlutusTxInfo PlutusV1 era
   , EraPlutusTxInfo PlutusV2 era
@@ -175,7 +178,8 @@ exampleDijkstraBasedSubTx ::
   forall era.
   ( AlonzoEraTx era
   , DijkstraEraTxBody era
-  , Value era ~ MaryValue
+  , DijkstraEraTxOut era
+  , MaryValueRepresentation (Value era)
   , DijkstraEraScript era
   , EraPlutusTxInfo PlutusV1 era
   , EraPlutusTxInfo PlutusV2 era
@@ -192,12 +196,13 @@ addDijkstraBasedTopTxFeatures ::
   forall era.
   ( AlonzoEraTx era
   , DijkstraEraTxBody era
+  , DijkstraEraTxOut era
   , DijkstraEraScript era
   , EraPlutusTxInfo 'PlutusV1 era
   , EraPlutusTxInfo 'PlutusV2 era
   , EraPlutusTxInfo 'PlutusV3 era
   , EraPlutusTxInfo 'PlutusV4 era
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   ) =>
   Tx TopTx era ->
   Tx TopTx era
@@ -224,10 +229,11 @@ addDijkstraBasedTxFeatures ::
   forall era l.
   ( AlonzoEraTx era
   , DijkstraEraTxBody era
+  , DijkstraEraTxOut era
   , DijkstraEraScript era
   , EraPlutusTxInfo 'PlutusV1 era
   , EraPlutusTxInfo 'PlutusV4 era
-  , Value era ~ MaryValue
+  , MaryValueRepresentation (Value era)
   ) =>
   Tx l era ->
   Tx l era
@@ -253,9 +259,10 @@ addDijkstraBasedTxFeatures tx =
       <>~ StrictSeq.fromList
         [ mkBasicTxOut
             (mkAddr examplePayKey exampleStakeKey)
-            (exampleMultiAssetValue 2)
+            (fromMaryRepresentation $ exampleMultiAssetValue 2)
             & datumTxOutL .~ Datum (dataToBinaryData exampleDatum)
             & referenceScriptTxOutL .~ SJust (alwaysSucceeds @'PlutusV4 3)
+            & capacityDepositTxOutL .~ CapacityDeposit (Coin 2_500_000)
         ]
     & bodyTxL . guardsTxBodyL
       .~ OSet.fromList

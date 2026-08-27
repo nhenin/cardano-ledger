@@ -107,7 +107,7 @@ exampleBabbageNewEpochState ::
   NewEpochState era
 exampleBabbageNewEpochState =
   exampleNewEpochState
-    (fromMaryValue $ exampleMultiAssetValue 1)
+    (fromMaryRepresentation $ exampleMultiAssetValue 1)
     emptyPParams
     (emptyPParams & ppCoinsPerUTxOByteL .~ CoinPerByte (CompactCoin 1))
 
@@ -180,17 +180,17 @@ addBabbageBasedTxFeatures tx =
       <>~ StrictSeq.fromList
         [ mkBasicTxOut
             (mkAddr examplePayKey exampleStakeKey)
-            (fromMaryValue $ exampleMultiAssetValue 1)
+            (fromMaryRepresentation $ exampleMultiAssetValue 1)
             & datumTxOutL .~ Datum (dataToBinaryData exampleDatum)
             & referenceScriptTxOutL .~ SJust (alwaysSucceeds @'PlutusV1 3)
         , mkBasicTxOut
             (mkAddr examplePayKey exampleStakeKey)
-            (fromMaryValue $ exampleMultiAssetValue 2)
+            (fromMaryRepresentation $ exampleMultiAssetValue 2)
             & datumTxOutL .~ Datum (dataToBinaryData exampleDatum)
             & referenceScriptTxOutL .~ SJust (alwaysSucceeds @'PlutusV2 3)
         , mkBasicTxOut
             (mkAddr examplePayKey exampleStakeKey)
-            (fromMaryValue $ exampleMultiAssetValue 3)
+            (fromMaryRepresentation $ exampleMultiAssetValue 3)
             & referenceScriptTxOutL .~ SJust (fromNativeScript exampleShelleyScript)
         ]
 
@@ -202,7 +202,7 @@ exampleCollateralOutput ::
 exampleCollateralOutput =
   mkBasicTxOut
     (mkAddr examplePayKey exampleStakeKey)
-    (fromMaryValue $ MaryValue (Coin 8675309) mempty)
+    (fromMaryRepresentation $ MaryValue (Coin 8675309) mempty)
 
 exampleBabbageOnwardsEraPParams :: BabbageEraPParams era => PParams era
 exampleBabbageOnwardsEraPParams =

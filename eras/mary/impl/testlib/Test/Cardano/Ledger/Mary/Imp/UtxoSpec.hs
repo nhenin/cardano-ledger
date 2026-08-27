@@ -33,7 +33,7 @@ mintBasicToken = do
       txValue = MaryValue mempty txAsset
       txBody =
         mkBasicTxBody
-          & outputsTxBodyL .~ [mkBasicTxOut addr (fromMaryValue txValue)]
+          & outputsTxBodyL .~ [mkBasicTxOut addr (fromMaryRepresentation txValue)]
           & mintTxBodyL .~ txAsset
   submitTx $ mkBasicTx txBody
 
@@ -56,7 +56,7 @@ spec = describe "UTXO" $ do
       let MaryValue c (MultiAsset mintedMultiAsset) =
             case txMinted ^. bodyTxL . outputsTxBodyL of
               Empty -> error "Empty outputs was unexpected"
-              txOut :<| _ -> toMaryValue (txOut ^. valueTxOutL)
+              txOut :<| _ -> toMaryRepresentation (txOut ^. valueTxOutL)
           burnTooMuchMultiAsset@(MultiAsset burnTooMuch) =
             MultiAsset (Map.map (Map.map (subtract tooMuch . negate)) mintedMultiAsset)
           -- Produced should contain positive value that was atttempted to be burned
@@ -72,6 +72,6 @@ spec = describe "UTXO" $ do
         [ injectFailure $
             Shelley.ValueNotConservedUTxO $
               Mismatch
-                (rootTxOutValue <> fromMaryValue (MaryValue c (MultiAsset mintedMultiAsset)))
-                (rootTxOutValue <> fromMaryValue (MaryValue c burnTooMuchProducedMultiAsset))
+                (rootTxOutValue <> fromMaryRepresentation (MaryValue c (MultiAsset mintedMultiAsset)))
+                (rootTxOutValue <> fromMaryRepresentation (MaryValue c burnTooMuchProducedMultiAsset))
         ]

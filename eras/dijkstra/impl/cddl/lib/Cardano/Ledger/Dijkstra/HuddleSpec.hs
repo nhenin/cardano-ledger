@@ -18,7 +18,7 @@ module Cardano.Ledger.Dijkstra.HuddleSpec (
   DijkstraEra,
   dijkstraCDDL,
   dijkstraMultiasset,
-  dijkstraValueRule,
+  dijkstraAssetsRule,
   guardsRule,
   subTransactionsRule,
   subTransactionRule,
@@ -410,15 +410,15 @@ auxiliaryDataMapRule pname p =
           ]
       )
 
-dijkstraValueRule ::
+dijkstraAssetsRule ::
   forall era.
   ( HuddleRule "positive_coin" era
   , HuddleRule1 "multiasset" era
   ) =>
-  Proxy "value" ->
+  Proxy "assets" ->
   Proxy era ->
   Rule
-dijkstraValueRule pname p =
+dijkstraAssetsRule pname p =
   pname
     =.= huddleRule @"coin" p
     / sarr
@@ -752,8 +752,11 @@ instance HuddleRule "required_signers" DijkstraEra where
     pname
       =.= huddleRule1 @"nonempty_set" p (huddleRule @"addr_keyhash" p)
 
-instance HuddleRule "value" DijkstraEra where
-  huddleRuleNamed = dijkstraValueRule
+instance HuddleRule "assets" DijkstraEra where
+  huddleRuleNamed = dijkstraAssetsRule
+
+instance HuddleRule "capacity_deposit" DijkstraEra where
+  huddleRuleNamed pname p = pname =.= huddleRule @"coin" p
 
 instance HuddleRule "mint" DijkstraEra where
   huddleRuleNamed = conwayMintRule
@@ -782,21 +785,63 @@ instance HuddleRule "datum_option" DijkstraEra where
 instance HuddleRule "script_ref" DijkstraEra where
   huddleRuleNamed = scriptRefRule
 
-instance HuddleRule "alonzo_transaction_output" DijkstraEra where
-  huddleRuleNamed = alonzoTransactionOutputRule
-
-instance HuddleRule "babbage_transaction_output" DijkstraEra where
-  huddleRuleNamed = babbageTransactionOutput
-
 instance HuddleRule "transaction_output" DijkstraEra where
   huddleRuleNamed pname p =
     comment
-      [str| Both of the Alonzo and Babbage style TxOut formats are equally valid
-          | and can be used interchangeably
+      [str| A Dijkstra output either states its capacity deposit explicitly
+          | (the split form, validated as exactly the required tariff), or
+          | arrives in a merged legacy form whose deposit is implicit: the
+          | ledger derives it as the output enters the UTxO. Accepting the
+          | merged forms keeps transactions signed before the era boundary
+          | valid after it: signed bytes are reinterpreted, never rewritten.
           |]
       $ pname
-        =.= huddleRule @"alonzo_transaction_output" p
-        / huddleRule @"babbage_transaction_output" p
+        =.= huddleRule @"split_transaction_output" p
+        / huddleRule @"merged_transaction_output" p
+
+instance HuddleRule "split_transaction_output" DijkstraEra where
+  huddleRuleNamed pname p =
+    comment
+      [str| The native form: application assets (key 1) next to the capacity
+          | deposit funding the UTxO state the output occupies (key 4).
+          |]
+      $ pname
+        =.= mp
+          [ idx 0 ==> huddleRule @"address" p
+          , idx 1 ==> huddleRule @"assets" p
+          , opt $ idx 2 ==> huddleRule @"datum_option" p
+          , opt $ idx 3 ==> huddleRule @"script_ref" p
+          , idx 4 ==> huddleRule @"capacity_deposit" p
+          ]
+
+instance HuddleRule "merged_transaction_output" DijkstraEra where
+  huddleRuleNamed pname p =
+    comment
+      [str| The merged legacy forms (pre-Dijkstra Babbage map and Alonzo
+          | array): all the ada in the assets, deposit implicit.
+          |]
+      $ pname
+        =.= huddleRule @"babbage_transaction_output" p
+        / huddleRule @"alonzo_transaction_output" p
+
+instance HuddleRule "babbage_transaction_output" DijkstraEra where
+  huddleRuleNamed pname p =
+    pname
+      =.= mp
+        [ idx 0 ==> huddleRule @"address" p
+        , idx 1 ==> huddleRule @"assets" p
+        , opt $ idx 2 ==> huddleRule @"datum_option" p
+        , opt $ idx 3 ==> huddleRule @"script_ref" p
+        ]
+
+instance HuddleRule "alonzo_transaction_output" DijkstraEra where
+  huddleRuleNamed pname p =
+    pname
+      =.= arr
+        [ a (huddleRule @"address" p)
+        , "amount" ==> huddleRule @"assets" p
+        , opt ("datum_hash" ==> huddleRule @"hash32" p)
+        ]
 
 instance HuddleRule "sub_transaction_body" DijkstraEra where
   huddleRuleNamed = subTransactionBodyRule

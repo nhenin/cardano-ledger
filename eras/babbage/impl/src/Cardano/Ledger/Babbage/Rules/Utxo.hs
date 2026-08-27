@@ -30,6 +30,7 @@ module Cardano.Ledger.Babbage.Rules.Utxo (
   feesOK,
   validateTotalCollateral,
   validateCollateralEqBalance,
+  validateCollateralContainsNonADA,
   validateOutputTooSmallUTxO,
   disjointRefInputs,
   updateUTxOState,

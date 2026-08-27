@@ -51,4 +51,4 @@ mkTokenMintingTx sh = do
   pure $
     mkBasicTx mkBasicTxBody
       & bodyTxL . mintTxBodyL .~ ma
-      & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr (fromMaryValue $ MaryValue mempty ma)]
+      & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr (fromMaryRepresentation $ MaryValue mempty ma)]
