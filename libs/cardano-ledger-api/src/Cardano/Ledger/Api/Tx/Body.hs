@@ -43,9 +43,20 @@ module Cardano.Ledger.Api.Tx.Body (
 
   -- * Mary Era
   MaryEraTxBody,
+  Forging (..),
+  MintedAssets,
+  unMintedAssets,
+  BurnedAssets,
+  unBurnedAssets,
+  mintedAssets,
+  burnedAssets,
   mintTxBodyL,
   mintValueTxBodyF,
   mintedTxBodyF,
+  forgingTxBodyL,
+  mintedAssetsTxBodyF,
+  burnedAssetsTxBodyF,
+  mintPoliciesTxBodyF,
 
   -- * Alonzo Era
   AlonzoEraTxBody,
@@ -118,6 +129,21 @@ import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Core (MaryEraTxBody (..))
+import Cardano.Ledger.Mary.Mint (
+  BurnedAssets,
+  Forging (..),
+  MintedAssets,
+  burnedAssets,
+  mintedAssets,
+  unBurnedAssets,
+  unMintedAssets,
+ )
+import Cardano.Ledger.Mary.TxBody (
+  burnedAssetsTxBodyF,
+  forgingTxBodyL,
+  mintPoliciesTxBodyF,
+  mintedAssetsTxBodyF,
+ )
 import Cardano.Ledger.Mary.Value (MultiAsset)
 import Cardano.Ledger.Shelley.Core (ShelleyEraTxBody (..))
 import Cardano.Ledger.Shelley.PParams (Update)

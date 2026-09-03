@@ -2,6 +2,10 @@
 
 ## 1.11.1.0
 
+* Add `Cardano.Ledger.Mary.Mint`, re-exported by `Cardano.Ledger.Mary.Core`, with:
+  - `Forging`, `MintedAssets`, and `BurnedAssets`, with their accessors
+  - `mintedAssets` and `burnedAssets` projections
+* Add `forgingTxBodyL`, `mintedAssetsTxBodyF`, `burnedAssetsTxBodyF`, and `mintPoliciesTxBodyF` to `Cardano.Ledger.Mary.TxBody`, re-exported by `Cardano.Ledger.Mary.Core`
 * Add `EncCBOR`, `ToCBOR` for `Block`
 * Add `DecCBOR` instances for `Annotator Block`
 

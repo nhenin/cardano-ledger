@@ -2,6 +2,9 @@
 
 ## 0.4.0.0
 
+* Re-export the typed forging API from `Cardano.Ledger.Dijkstra.Core`:
+  - `Forging`, `MintedAssets`, and `BurnedAssets`, with their accessors and projections
+  - `forgingTxBodyL`, `mintedAssetsTxBodyF`, `burnedAssetsTxBodyF`, and `mintPoliciesTxBodyF`
 * Add `localProducedValue` helper in `UTxO` module
 * Add `ValueNotConservedInLegacyInLegacyMode` constructor to `DijkstraUtxoPredFailure`
 * Rename:

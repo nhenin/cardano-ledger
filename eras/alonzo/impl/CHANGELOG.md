@@ -2,6 +2,9 @@
 
 ## 1.17.0.0
 
+* Re-export the typed forging API from `Cardano.Ledger.Alonzo.Core`:
+  - `Forging`, `MintedAssets`, and `BurnedAssets`, with their accessors and projections
+  - `forgingTxBodyL`, `mintedAssetsTxBodyF`, `burnedAssetsTxBodyF`, and `mintPoliciesTxBodyF`
 * Remove `AlonzoEraUTxO` constraint from `mkPlutusWithContext`
 * Add `toPlutusRedeemerPointer` and `toPlutusTxOut` methods to `EraPlutusTxInfo`
 * Add `PlutusPurposeScriptHashArg`, `PlutusRedeemerPointer` and `PlutusTxOut` type families

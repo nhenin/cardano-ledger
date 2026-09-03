@@ -11,6 +11,7 @@ import qualified Test.Cardano.Ledger.Mary.Binary.CddlSpec as CddlSpec
 import qualified Test.Cardano.Ledger.Mary.BinarySpec as BinarySpec
 import qualified Test.Cardano.Ledger.Mary.Imp as Imp
 import Test.Cardano.Ledger.Mary.ImpTest ()
+import qualified Test.Cardano.Ledger.Mary.MintSpec as MintSpec
 import qualified Test.Cardano.Ledger.Mary.ValueSpec as ValueSpec
 import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
 
@@ -22,6 +23,7 @@ instance EraSpec MaryEra where
 main :: IO ()
 main =
   ledgerEraTestMain @MaryEra $ do
+    MintSpec.spec
     ValueSpec.spec
     BinarySpec.spec
     CddlSpec.spec

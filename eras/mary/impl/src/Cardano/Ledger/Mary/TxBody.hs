@@ -21,6 +21,10 @@
 
 module Cardano.Ledger.Mary.TxBody (
   MaryEraTxBody (..),
+  forgingTxBodyL,
+  mintedAssetsTxBodyF,
+  burnedAssetsTxBodyF,
+  mintPoliciesTxBodyF,
   TxBody (
     MkMaryTxBody,
     MaryTxBody,
@@ -42,6 +46,13 @@ import Cardano.Ledger.Allegra.TxBody
 import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Era (MaryEra)
+import Cardano.Ledger.Mary.Mint (
+  BurnedAssets,
+  Forging (..),
+  MintedAssets,
+  burnedAssets,
+  mintedAssets,
+ )
 import Cardano.Ledger.Mary.TxCert ()
 import Cardano.Ledger.Mary.TxOut ()
 import Cardano.Ledger.Mary.Value
@@ -79,6 +90,33 @@ class AllegraEraTxBody era => MaryEraTxBody era where
   default mintValueTxBodyF :: Value era ~ MaryValue => SimpleGetter (TxBody l era) (Value era)
   mintValueTxBodyF = mintTxBodyL . to (MaryValue mempty)
   {-# INLINE mintValueTxBodyF #-}
+
+-- | A typed view of the signed native-asset quantities in the mint field.
+-- The underlying transaction representation and wire encoding remain
+-- 'MultiAsset'.
+forgingTxBodyL :: MaryEraTxBody era => Lens' (TxBody l era) Forging
+forgingTxBodyL =
+  lens
+    (\txBody -> Forging (txBody ^. mintTxBodyL))
+    (\txBody (Forging mint) -> set mintTxBodyL mint txBody)
+{-# INLINE forgingTxBodyL #-}
+
+-- | The positive native-asset quantities minted by the transaction.
+mintedAssetsTxBodyF :: MaryEraTxBody era => SimpleGetter (TxBody l era) MintedAssets
+mintedAssetsTxBodyF = forgingTxBodyL . to mintedAssets
+{-# INLINE mintedAssetsTxBodyF #-}
+
+-- | The positive magnitudes burned by the transaction.
+burnedAssetsTxBodyF :: MaryEraTxBody era => SimpleGetter (TxBody l era) BurnedAssets
+burnedAssetsTxBodyF = forgingTxBodyL . to burnedAssets
+{-# INLINE burnedAssetsTxBodyF #-}
+
+-- | Policies referenced by the mint field, whether assets are minted or burned.
+-- Retain policies with only zero quantities or no assets, as the raw field
+-- does; deriving this set from the positive projections would lose them.
+mintPoliciesTxBodyF :: MaryEraTxBody era => SimpleGetter (TxBody l era) (Set PolicyID)
+mintPoliciesTxBodyF = forgingTxBodyL . to (policies . unForging)
+{-# INLINE mintPoliciesTxBodyF #-}
 
 -- ===========================================================================
 -- Wrap it all up in a newtype, hiding the insides with a pattern constructor.

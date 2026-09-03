@@ -31,6 +31,7 @@ library
   exposed-modules:
     Cardano.Ledger.Mary
     Cardano.Ledger.Mary.Core
+    Cardano.Ledger.Mary.Mint
     Cardano.Ledger.Mary.State
     Cardano.Ledger.Mary.Transition
     Cardano.Ledger.Mary.TxBody
@@ -195,6 +196,7 @@ test-suite tests
   other-modules:
     Test.Cardano.Ledger.Mary.Binary.CddlSpec
     Test.Cardano.Ledger.Mary.BinarySpec
+    Test.Cardano.Ledger.Mary.MintSpec
     Test.Cardano.Ledger.Mary.ValueSpec
 
   default-language: Haskell2010
@@ -223,4 +225,6 @@ test-suite tests
     cardano-ledger-mary:cddl,
     cardano-ledger-shelley:testlib,
     containers,
+    groups,
+    microlens,
     testlib,
