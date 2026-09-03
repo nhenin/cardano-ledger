@@ -16,7 +16,7 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.State ()
-import Cardano.Ledger.Mary.Value (MaryValue (..), filterMultiAsset, mapMaybeMultiAsset, policyID)
+import Cardano.Ledger.Mary.Value (MaryValue (..), policyID)
 import Cardano.Ledger.Shelley.UTxO (
   ShelleyScriptsNeeded (..),
   getShelleyMinFeeTxUtxo,
@@ -72,7 +72,7 @@ getConsumedMaryValue ::
 getConsumedMaryValue pp lookupStakingDeposit utxo txBody =
   consumedValue <> MaryValue mempty mintedMultiAsset
   where
-    mintedMultiAsset = filterMultiAsset (\_ _ -> (> 0)) $ txBody ^. mintTxBodyL
+    mintedMultiAsset = unMintedAssets (txBody ^. mintedAssetsTxBodyF)
     {- balance (txins tx ◁ u) + wbalance (txwdrls tx) + keyRefunds pp tx -}
     consumedValue =
       sumUTxO (txInsFilter utxo (txBody ^. inputsTxBodyL))
@@ -92,9 +92,7 @@ getProducedMaryValue pp isPoolRegistered txBody =
 
 burnedMultiAssets :: MaryEraTxBody era => TxBody l era -> MaryValue
 burnedMultiAssets txBody =
-  MaryValue mempty $
-    mapMaybeMultiAsset (\_ _ v -> if v < 0 then Just (negate v) else Nothing) $
-      txBody ^. mintTxBodyL
+  MaryValue mempty (unBurnedAssets (txBody ^. burnedAssetsTxBodyF))
 
 -- | Computes the set of script hashes required to unlock the transaction inputs and the
 -- withdrawals. Unlike the one from Shelley, this one also includes script hashes needed
