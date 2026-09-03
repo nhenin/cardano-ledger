@@ -4,9 +4,9 @@
 -- Data equality observes entries and ordering that algebraic Value equality
 -- does not distinguish, so all translation specs compare Data directly.
 module Test.Cardano.Ledger.Plutus.Value.Translation.Fixtures (
-  assetNameFixtures,
-  policyFixtures,
-  nativeAssetFixtures,
+  assetName,
+  policy,
+  nativeAsset,
   adaEntry,
   nativeData,
 ) where
@@ -21,21 +21,21 @@ import qualified PlutusLedgerApi.Common as P
 
 type NativeEntries = [(BS.ByteString, [(BS.ByteString, Integer)])]
 
-assetNameFixtures :: [(String, AssetName, BS.ByteString)]
-assetNameFixtures =
+assetName :: [(String, AssetName, BS.ByteString)]
+assetName =
   [ ("empty", AssetName "", BS.empty)
   , ("text", AssetName "a", "a")
   , ("binary", AssetName "\NUL\255", BS.pack [0, 255])
   ]
 
-policyFixtures :: [(String, PolicyID, BS.ByteString)]
-policyFixtures =
+policy :: [(String, PolicyID, BS.ByteString)]
+policy =
   [ ("policy A", policyA, policyABytes)
   , ("policy B", policyB, policyBBytes)
   ]
 
-nativeAssetFixtures :: [(String, MultiAsset, NativeEntries)]
-nativeAssetFixtures =
+nativeAsset :: [(String, MultiAsset, NativeEntries)]
+nativeAsset =
   [ ("empty native map", multiAsset [], [])
   ,
     ( "positive native quantity"
@@ -79,7 +79,7 @@ nativeAssetFixtures =
 -- not be pruned by fixture construction before their translation is checked.
 multiAsset :: [(PolicyID, [(AssetName, Integer)])] -> MultiAsset
 multiAsset entries =
-  MultiAsset $ Map.fromList [(policy, Map.fromList assets) | (policy, assets) <- entries]
+  MultiAsset $ Map.fromList [(policyId, Map.fromList assets) | (policyId, assets) <- entries]
 
 policyA, policyB :: PolicyID
 policyA = PolicyID (ScriptHash "00000000000000000000000000000000000000000000000000000000")
@@ -94,6 +94,6 @@ adaEntry amount = (P.B BS.empty, P.Map [(P.B BS.empty, P.I amount)])
 
 nativeData :: NativeEntries -> [(P.Data, P.Data)]
 nativeData entries =
-  [ (P.B policy, P.Map [(P.B assetName, P.I quantity) | (assetName, quantity) <- assets])
-  | (policy, assets) <- entries
+  [ (P.B policyBytes, P.Map [(P.B nameBytes, P.I quantity) | (nameBytes, quantity) <- assets])
+  | (policyBytes, assets) <- entries
   ]
