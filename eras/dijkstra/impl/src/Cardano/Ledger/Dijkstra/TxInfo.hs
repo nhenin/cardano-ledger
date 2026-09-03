@@ -43,7 +43,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   SupportedLanguage (..),
   SupportedPlutusRunnable (..),
  )
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (transPolicyID, transValue)
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (transValue)
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (toAsItem)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
@@ -114,7 +114,10 @@ import Cardano.Ledger.Plutus (
   transScriptHash,
  )
 import Cardano.Ledger.Plutus.Data (Data)
+import qualified Cardano.Ledger.Plutus.PolicyID.Translation as PlutusPolicyID
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
+import qualified Cardano.Ledger.Plutus.Value.Translation.V1V2 as PlutusV1V2
+import qualified Cardano.Ledger.Plutus.Value.Translation.V3V4 as PlutusV3V4
 import Cardano.Ledger.State (StakePoolParams (..), UTxO)
 import Cardano.Ledger.TxIn (TxId (TxId), TxIn (..))
 import Control.DeepSeq (NFData)
@@ -343,7 +346,7 @@ instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
             { PV1.txInfoInputs = inputs
             , PV1.txInfoOutputs = outputs
             , PV1.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
-            , PV1.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
+            , PV1.txInfoMint = PlutusV1V2.fromLedgerForging (txBody ^. forgingTxBodyL)
             , PV1.txInfoDCert = txCerts
             , PV1.txInfoWdrl = Alonzo.transTxBodyWithdrawals txBody
             , PV1.txInfoValidRange = timeRange
@@ -412,7 +415,7 @@ instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
             , PV2.txInfoOutputs = outputs
             , PV2.txInfoReferenceInputs = refInputs
             , PV2.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
-            , PV2.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
+            , PV2.txInfoMint = PlutusV1V2.fromLedgerForging (txBody ^. forgingTxBodyL)
             , PV2.txInfoDCert = txCerts
             , PV2.txInfoWdrl = PV2.unsafeFromList $ Alonzo.transTxBodyWithdrawals txBody
             , PV2.txInfoValidRange = timeRange
@@ -463,7 +466,7 @@ instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
             , PV3.txInfoOutputs = outputs
             , PV3.txInfoReferenceInputs = refInputsInfo
             , PV3.txInfoFee = transCoinToLovelace (txBody ^. feeTxBodyL)
-            , PV3.txInfoMint = Conway.transMintValue (txBody ^. mintTxBodyL)
+            , PV3.txInfoMint = PlutusV3V4.fromLedgerForging (txBody ^. forgingTxBodyL)
             , PV3.txInfoTxCerts = txCerts
             , PV3.txInfoWdrl = Conway.transTxBodyWithdrawals txBody
             , PV3.txInfoValidRange = timeRange
@@ -651,7 +654,7 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
             , PV4.txInfoReferenceInputs = refInputsInfo
             , PV4.txInfoFee =
                 withBothTxLevels txBody (\topTxBody -> transCoinToLovelace (topTxBody ^. feeTxBodyL)) (const 0)
-            , PV4.txInfoMint = Conway.transMintValue (txBody ^. mintTxBodyL)
+            , PV4.txInfoMint = PlutusV3V4.fromLedgerForging (txBody ^. forgingTxBodyL)
             , PV4.txInfoTxCerts = txCerts
             , PV4.txInfoValidRange = timeRange
             , PV4.txInfoRedeemers = plutusRedeemers
@@ -868,7 +871,7 @@ transPlutusPurposeV4 ::
 transPlutusPurposeV4 proxy pv (transScriptHash -> sh) = \case
   DijkstraSpending (AsIxItem _ (TxIn txId (TxIx ix))) ->
     pure . PV4.Spending sh $ PV4.TxOutRef (transTxId txId) (toInteger ix)
-  DijkstraMinting (AsIxItem _ pId) -> pure . PV4.Minting sh $ transPolicyID pId
+  DijkstraMinting (AsIxItem _ pId) -> pure . PV4.Minting sh $ PlutusPolicyID.fromLedgerPolicyID pId
   DijkstraCertifying (AsIxItem ix cert) ->
     pure $ PV4.Certifying sh (toInteger ix) (transTxCertV4 proxy pv cert)
   DijkstraWithdrawing (AsIxItem _ (AccountAddress _ (AccountId c))) ->

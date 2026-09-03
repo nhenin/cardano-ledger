@@ -14,6 +14,7 @@ import qualified Test.Cardano.Ledger.Alonzo.GoldenTranslation as GoldenTranslati
 import qualified Test.Cardano.Ledger.Alonzo.Imp as Imp
 import qualified Test.Cardano.Ledger.Alonzo.Imp.TxInfoSpec as TxInfo
 import Test.Cardano.Ledger.Alonzo.ImpTest ()
+import qualified Test.Cardano.Ledger.Alonzo.Plutus.AssetTranslationSpec as AssetTranslation
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 import Test.Cardano.Ledger.Era
@@ -28,6 +29,7 @@ instance EraSpec AlonzoEra where
 main :: IO ()
 main =
   ledgerEraTestMain @AlonzoEra $ do
+    AssetTranslation.spec
     BinarySpec.spec
     Canonical.spec
     CddlSpec.spec

@@ -88,6 +88,7 @@ import Cardano.Ledger.Plutus.TxInfo (
   transTxIn,
   txOutSourceToText,
  )
+import qualified Cardano.Ledger.Plutus.Value.Translation.V1V2 as PlutusV1V2
 import Cardano.Ledger.State (EraUTxO (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxIn (..), txInToText)
 import Control.Arrow (left)
@@ -361,7 +362,7 @@ instance EraPlutusTxInfo 'PlutusV1 BabbageEra where
             { PV1.txInfoInputs = inputs
             , PV1.txInfoOutputs = outputs
             , PV1.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
-            , PV1.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
+            , PV1.txInfoMint = PlutusV1V2.fromLedgerForging (txBody ^. forgingTxBodyL)
             , PV1.txInfoDCert = txCerts
             , PV1.txInfoWdrl = Alonzo.transTxBodyWithdrawals txBody
             , PV1.txInfoValidRange = timeRange
@@ -406,7 +407,7 @@ instance EraPlutusTxInfo 'PlutusV2 BabbageEra where
             , PV2.txInfoOutputs = outputs
             , PV2.txInfoReferenceInputs = refInputs
             , PV2.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
-            , PV2.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
+            , PV2.txInfoMint = PlutusV1V2.fromLedgerForging (txBody ^. forgingTxBodyL)
             , PV2.txInfoDCert = txCerts
             , PV2.txInfoWdrl = PV2.unsafeFromList $ Alonzo.transTxBodyWithdrawals txBody
             , PV2.txInfoValidRange = timeRange

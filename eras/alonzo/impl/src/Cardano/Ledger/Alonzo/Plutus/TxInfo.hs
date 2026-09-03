@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -71,24 +70,21 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Mary.Value (
-  AssetName (..),
-  MaryValue (..),
-  MultiAsset (..),
-  PolicyID (..),
- )
+import Cardano.Ledger.Mary.Value (AssetName, MaryValue (..), MultiAsset, PolicyID)
 import Cardano.Ledger.Plutus
+import qualified Cardano.Ledger.Plutus.AssetName.Translation as PlutusAssetName
+import qualified Cardano.Ledger.Plutus.PolicyID.Translation as PlutusPolicyID
+import qualified Cardano.Ledger.Plutus.Value.Translation as PlutusValue
+import qualified Cardano.Ledger.Plutus.Value.Translation.V1V2 as PlutusV1V2
 import Cardano.Ledger.Rules.ValidationMode (Inject (..))
 import Cardano.Ledger.State (StakePoolParams (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxIn (..), txInToText)
-import Cardano.Ledger.Val (zero)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.Arrow (left)
 import Control.DeepSeq (NFData)
 import Control.Monad (forM, guard)
 import Data.Aeson (ToJSON (..), pattern String)
-import Data.ByteString.Short as SBS (fromShort)
 import Data.Foldable as F (Foldable (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, isNothing, mapMaybe)
@@ -97,7 +93,6 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import qualified PlutusLedgerApi.V1 as PV1
-import qualified PlutusLedgerApi.V2 as PV2
 
 mkPlutusWithContext ::
   forall era.
@@ -153,7 +148,7 @@ instance EraPlutusTxInfo 'PlutusV1 AlonzoEra where
               PV1.txInfoInputs = catMaybes txInsMaybes
             , PV1.txInfoOutputs = mapMaybe transTxOut $ F.toList (txBody ^. outputsTxBodyL)
             , PV1.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
-            , PV1.txInfoMint = transMintValue (txBody ^. mintTxBodyL)
+            , PV1.txInfoMint = PlutusV1V2.fromLedgerForging (txBody ^. forgingTxBodyL)
             , PV1.txInfoDCert = txCerts
             , PV1.txInfoWdrl = transTxBodyWithdrawals txBody
             , PV1.txInfoValidRange = timeRange
@@ -351,32 +346,25 @@ transTxWitsDatums txWits = transDataPair <$> Map.toList (txWits ^. datsTxWitsL .
 -- ==================================
 -- translate Values
 
+-- | Compatibility entry point for the Ledger policy identifier.
 transPolicyID :: PolicyID -> PV1.CurrencySymbol
-transPolicyID (PolicyID (ScriptHash x)) = PV1.CurrencySymbol (PV1.toBuiltin (hashToBytes x))
+transPolicyID = PlutusPolicyID.fromLedgerPolicyID
 
+-- | Compatibility entry point for the Ledger asset name.
 transAssetName :: AssetName -> PV1.TokenName
-transAssetName (AssetName bs) = PV1.TokenName (PV1.toBuiltin (SBS.fromShort bs))
+transAssetName = PlutusAssetName.fromLedgerAssetName
 
+-- | Compatibility entry point for the raw Ledger native-asset map.
 transMultiAsset :: MultiAsset -> PV1.Value
-transMultiAsset (MultiAsset m) = PV1.Value (toAssocMap transPolicyID (toAssocMap transAssetName id) m)
-  where
-    toAssocMap :: (k -> pk) -> (v -> pv) -> Map.Map k v -> PV2.Map pk pv
-    toAssocMap transKey transVal =
-      PV2.unsafeFromList . Map.foldrWithKey' accWithKey []
-      where
-        accWithKey key value !acc = (transKey key, transVal value) : acc
+transMultiAsset = PlutusValue.fromLedgerMultiAsset
 
--- | Hysterical raisins:
---
--- Previously transaction body contained a mint field with MaryValue instead of a
--- MultiAsset, which has changed since then to just MultiAsset (because minting ADA
--- makes no sense). However, if we don't preserve previous translation, scripts that
--- previously succeeded will fail.
+-- | Compatibility entry point for the raw Ledger mint representation.
+{-# DEPRECATED transMintValue "Use `Cardano.Ledger.Plutus.Value.Translation.V1V2.fromLedgerForging`" #-}
 transMintValue :: MultiAsset -> PV1.Value
-transMintValue m = transCoinToValue zero <> transMultiAsset m
+transMintValue = PlutusV1V2.fromLedgerForging . Forging
 
 transValue :: MaryValue -> PV1.Value
-transValue (MaryValue c m) = transCoinToValue c <> transMultiAsset m
+transValue (MaryValue c m) = transCoinToValue c <> PlutusValue.fromLedgerMultiAsset m
 
 -- =============================================
 -- translate fields like TxCert, Withdrawals, and similar
@@ -418,7 +406,7 @@ transPlutusPurpose ::
   Either (ContextError era) PV1.ScriptPurpose
 transPlutusPurpose proxy pv _ = \case
   AlonzoSpending (AsIxItem _ txIn) -> pure $ PV1.Spending (transTxIn txIn)
-  AlonzoMinting (AsIxItem _ policyId) -> pure $ PV1.Minting (transPolicyID policyId)
+  AlonzoMinting (AsIxItem _ policyId) -> pure $ PV1.Minting (PlutusPolicyID.fromLedgerPolicyID policyId)
   AlonzoCertifying (AsIxItem _ txCert) -> PV1.Certifying <$> toPlutusTxCert proxy pv txCert
   AlonzoWithdrawing (AsIxItem _ accountAddress) ->
     pure $ PV1.Rewarding (PV1.StakingHash (transAccountAddress accountAddress))
