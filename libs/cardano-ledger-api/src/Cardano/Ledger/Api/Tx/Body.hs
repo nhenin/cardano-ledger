@@ -129,7 +129,7 @@ import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Core (MaryEraTxBody (..))
-import Cardano.Ledger.Mary.Mint (
+import Cardano.Ledger.Mary.Forging (
   BurnedAssets,
   Forging (..),
   MintedAssets,

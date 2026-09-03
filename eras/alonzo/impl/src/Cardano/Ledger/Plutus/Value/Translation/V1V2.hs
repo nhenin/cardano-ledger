@@ -6,7 +6,7 @@ module Cardano.Ledger.Plutus.Value.Translation.V1V2 (
   fromLedgerForging,
 ) where
 
-import qualified Cardano.Ledger.Mary.Mint as Mary (Forging (..))
+import qualified Cardano.Ledger.Mary.Forging as Mary (Forging (..))
 import Cardano.Ledger.Plutus.TxInfo (transCoinToValue)
 import qualified Cardano.Ledger.Plutus.Value.Translation as PlutusValue
 import Cardano.Ledger.Val (zero)

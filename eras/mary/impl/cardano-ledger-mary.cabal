@@ -32,7 +32,7 @@ library
     Cardano.Ledger.Mary
     Cardano.Ledger.Mary.AssetName
     Cardano.Ledger.Mary.Core
-    Cardano.Ledger.Mary.Mint
+    Cardano.Ledger.Mary.Forging
     Cardano.Ledger.Mary.MultiAsset
     Cardano.Ledger.Mary.PolicyID
     Cardano.Ledger.Mary.State
@@ -200,7 +200,7 @@ test-suite tests
     Test.Cardano.Ledger.Mary.AssetNameSpec
     Test.Cardano.Ledger.Mary.Binary.CddlSpec
     Test.Cardano.Ledger.Mary.BinarySpec
-    Test.Cardano.Ledger.Mary.MintSpec
+    Test.Cardano.Ledger.Mary.ForgingSpec
     Test.Cardano.Ledger.Mary.MultiAssetSpec
     Test.Cardano.Ledger.Mary.PolicyIDSpec
     Test.Cardano.Ledger.Mary.ValueSpec

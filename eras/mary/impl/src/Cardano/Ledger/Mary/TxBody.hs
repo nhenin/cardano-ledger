@@ -46,7 +46,7 @@ import Cardano.Ledger.Allegra.TxBody
 import Cardano.Ledger.Binary (Annotator, DecCBOR (..), EncCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Era (MaryEra)
-import Cardano.Ledger.Mary.Mint (
+import Cardano.Ledger.Mary.Forging (
   BurnedAssets,
   Forging (..),
   MintedAssets,

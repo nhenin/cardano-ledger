@@ -5,7 +5,7 @@
 -- 'Forging' describes an operation, not holdings or total supply.
 -- 'MintedAssets' and 'BurnedAssets' expose its positive accounting magnitudes
 -- separately, so consumers do not have to rediscover the sign convention.
-module Cardano.Ledger.Mary.Mint (
+module Cardano.Ledger.Mary.Forging (
   Forging (..),
   MintedAssets,
   unMintedAssets,

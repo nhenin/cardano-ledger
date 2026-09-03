@@ -10,9 +10,9 @@ import Test.Cardano.Ledger.Era
 import qualified Test.Cardano.Ledger.Mary.AssetNameSpec as AssetNameSpec
 import qualified Test.Cardano.Ledger.Mary.Binary.CddlSpec as CddlSpec
 import qualified Test.Cardano.Ledger.Mary.BinarySpec as BinarySpec
+import qualified Test.Cardano.Ledger.Mary.ForgingSpec as ForgingSpec
 import qualified Test.Cardano.Ledger.Mary.Imp as Imp
 import Test.Cardano.Ledger.Mary.ImpTest ()
-import qualified Test.Cardano.Ledger.Mary.MintSpec as MintSpec
 import qualified Test.Cardano.Ledger.Mary.MultiAssetSpec as MultiAssetSpec
 import qualified Test.Cardano.Ledger.Mary.PolicyIDSpec as PolicyIDSpec
 import qualified Test.Cardano.Ledger.Mary.ValueSpec as ValueSpec
@@ -29,7 +29,7 @@ main =
     AssetNameSpec.spec
     PolicyIDSpec.spec
     MultiAssetSpec.spec
-    MintSpec.spec
+    ForgingSpec.spec
     ValueSpec.spec
     BinarySpec.spec
     CddlSpec.spec

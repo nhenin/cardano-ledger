@@ -3,14 +3,14 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Mary.MintSpec (spec) where
+module Test.Cardano.Ledger.Mary.ForgingSpec (spec) where
 
 import Cardano.Ledger.Binary (serialize')
 import Cardano.Ledger.Core (TxLevel (TopTx), eraProtVerLow, mkBasicTxBody)
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.AssetName (AssetName (..))
-import Cardano.Ledger.Mary.Mint
+import Cardano.Ledger.Mary.Forging
 import Cardano.Ledger.Mary.MultiAsset (MultiAsset (..), flattenMultiAsset, policies)
 import Cardano.Ledger.Mary.PolicyID (PolicyID (..))
 import Cardano.Ledger.Mary.TxBody

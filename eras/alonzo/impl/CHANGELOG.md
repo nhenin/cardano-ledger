@@ -9,7 +9,7 @@
   - `transMultiAsset` -> `Cardano.Ledger.Plutus.Value.Translation.fromLedgerMultiAsset`
   - `transValue` -> `Cardano.Ledger.Plutus.Value.Translation.fromLedgerMaryValue`
   - `transMintValue` -> `Cardano.Ledger.Plutus.Value.Translation.V1V2.fromLedgerForging`
-    (wrap the former `MultiAsset` argument with `Forging` from `Cardano.Ledger.Mary.Mint`;
+    (wrap the former `MultiAsset` argument with `Forging` from `Cardano.Ledger.Mary.Forging`;
     the Plutus V1/V2 zero-Ada entry is preserved)
 * Re-export the typed forging API from `Cardano.Ledger.Alonzo.Core`:
   - `Forging`, `MintedAssets`, and `BurnedAssets`, with their accessors and projections

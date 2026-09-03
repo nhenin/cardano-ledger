@@ -1,6 +1,6 @@
 module Test.Cardano.Ledger.Plutus.Value.Translation.V1V2Spec (spec) where
 
-import Cardano.Ledger.Mary.Mint (Forging (..))
+import Cardano.Ledger.Mary.Forging (Forging (..))
 import qualified Cardano.Ledger.Plutus.Value.Translation.V1V2 as PlutusV1V2
 import qualified PlutusLedgerApi.Common as P
 import qualified PlutusLedgerApi.V3 as PV3

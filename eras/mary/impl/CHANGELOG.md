@@ -6,7 +6,7 @@
   - Keep existing exports through `Cardano.Ledger.Mary.Value`; `MaryValue` and its compact representation remain there
   - Export the context-dependent quantity decoder `decodeMultiAsset` from `Cardano.Ledger.Mary.MultiAsset`; CBOR representations and protocol-version checks are unchanged
   - The defining-module metadata of the moved types changes
-* Add `Cardano.Ledger.Mary.Mint`, re-exported by `Cardano.Ledger.Mary.Core`, with:
+* Add `Cardano.Ledger.Mary.Forging`, re-exported by `Cardano.Ledger.Mary.Core`, with:
   - `Forging`, `MintedAssets`, and `BurnedAssets`, with their accessors
   - `mintedAssets` and `burnedAssets` projections
 * Add `forgingTxBodyL`, `mintedAssetsTxBodyF`, `burnedAssetsTxBodyF`, and `mintPoliciesTxBodyF` to `Cardano.Ledger.Mary.TxBody`, re-exported by `Cardano.Ledger.Mary.Core`
