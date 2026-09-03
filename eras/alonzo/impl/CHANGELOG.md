@@ -2,14 +2,21 @@
 
 ## 1.17.0.0
 
+* Remove the following exports from `Cardano.Ledger.Alonzo.Plutus.TxInfo`; use their replacements:
+  - `transPolicyID` -> `Cardano.Ledger.Plutus.PolicyID.Translation.fromLedgerPolicyID`
+  - `transAssetName` -> `Cardano.Ledger.Plutus.AssetName.Translation.fromLedgerAssetName`
+  - `transMultiAsset` -> `Cardano.Ledger.Plutus.Value.Translation.fromLedgerMultiAsset`
+  - `transValue` -> `Cardano.Ledger.Plutus.Value.Translation.fromLedgerMaryValue`
+  - `transMintValue` -> `Cardano.Ledger.Plutus.Value.Translation.V1V2.fromLedgerForging`
+    (wrap the former `MultiAsset` argument with `Forging` from `Cardano.Ledger.Mary.Mint`;
+    the Plutus V1/V2 zero-Ada entry is preserved)
 * Re-export the typed forging API from `Cardano.Ledger.Alonzo.Core`:
   - `Forging`, `MintedAssets`, and `BurnedAssets`, with their accessors and projections
   - `forgingTxBodyL`, `mintedAssetsTxBodyF`, `burnedAssetsTxBodyF`, and `mintPoliciesTxBodyF`
-* Add `Cardano.Ledger.Plutus.Value.Translation` with `fromLedgerMultiAsset`
+* Add `Cardano.Ledger.Plutus.Value.Translation` with `fromLedgerMultiAsset` and `fromLedgerMaryValue`
 * Add `Cardano.Ledger.Plutus.Value.Translation.V1V2` and `.V3V4`, each exposing `fromLedgerForging`
 * Add `Cardano.Ledger.Plutus.PolicyID.Translation` with `fromLedgerPolicyID`
 * Add `Cardano.Ledger.Plutus.AssetName.Translation` with `fromLedgerAssetName`
-* Deprecate `transMintValue` in favor of `Cardano.Ledger.Plutus.Value.Translation.V1V2.fromLedgerForging`
 * Remove `AlonzoEraUTxO` constraint from `mkPlutusWithContext`
 * Add `toPlutusRedeemerPointer` and `toPlutusTxOut` methods to `EraPlutusTxInfo`
 * Add `PlutusPurposeScriptHashArg`, `PlutusRedeemerPointer` and `PlutusTxOut` type families

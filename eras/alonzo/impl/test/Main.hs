@@ -14,10 +14,14 @@ import qualified Test.Cardano.Ledger.Alonzo.GoldenTranslation as GoldenTranslati
 import qualified Test.Cardano.Ledger.Alonzo.Imp as Imp
 import qualified Test.Cardano.Ledger.Alonzo.Imp.TxInfoSpec as TxInfo
 import Test.Cardano.Ledger.Alonzo.ImpTest ()
-import qualified Test.Cardano.Ledger.Alonzo.Plutus.AssetTranslationSpec as AssetTranslation
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 import Test.Cardano.Ledger.Era
+import qualified Test.Cardano.Ledger.Plutus.AssetName.TranslationSpec as PlutusAssetName
+import qualified Test.Cardano.Ledger.Plutus.PolicyID.TranslationSpec as PlutusPolicyID
+import qualified Test.Cardano.Ledger.Plutus.Value.Translation.V1V2Spec as PlutusV1V2
+import qualified Test.Cardano.Ledger.Plutus.Value.Translation.V3V4Spec as PlutusV3V4
+import qualified Test.Cardano.Ledger.Plutus.Value.TranslationSpec as PlutusValue
 import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
 
 instance EraSpec AlonzoEra where
@@ -29,7 +33,12 @@ instance EraSpec AlonzoEra where
 main :: IO ()
 main =
   ledgerEraTestMain @AlonzoEra $ do
-    AssetTranslation.spec
+    describe "Plutus asset translation" $ do
+      PlutusAssetName.spec
+      PlutusPolicyID.spec
+      PlutusValue.spec
+      PlutusV1V2.spec
+      PlutusV3V4.spec
     BinarySpec.spec
     Canonical.spec
     CddlSpec.spec

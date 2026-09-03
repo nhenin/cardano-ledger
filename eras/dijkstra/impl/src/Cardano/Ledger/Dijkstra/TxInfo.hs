@@ -43,7 +43,6 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   SupportedLanguage (..),
   SupportedPlutusRunnable (..),
  )
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (transValue)
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (toAsItem)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..))
@@ -116,6 +115,7 @@ import Cardano.Ledger.Plutus (
 import Cardano.Ledger.Plutus.Data (Data)
 import qualified Cardano.Ledger.Plutus.PolicyID.Translation as PlutusPolicyID
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
+import qualified Cardano.Ledger.Plutus.Value.Translation as PlutusValue
 import qualified Cardano.Ledger.Plutus.Value.Translation.V1V2 as PlutusV1V2
 import qualified Cardano.Ledger.Plutus.Value.Translation.V3V4 as PlutusV3V4
 import Cardano.Ledger.State (StakePoolParams (..), UTxO)
@@ -714,7 +714,7 @@ transTxOutV4 ::
   Either (ContextError era) PV4.TxOut
 transTxOutV4 txOutSource txOut = do
   let
-    val = transValue $ txOut ^. valueTxOutL
+    val = PlutusValue.fromLedgerMaryValue $ txOut ^. valueTxOutL
     referenceScript = transReferenceScript $ txOut ^. referenceScriptTxOutL
     datum =
       case txOut ^. datumTxOutF of

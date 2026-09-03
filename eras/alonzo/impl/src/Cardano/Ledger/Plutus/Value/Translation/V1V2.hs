@@ -13,8 +13,10 @@ import Cardano.Ledger.Val (zero)
 import qualified PlutusLedgerApi.V1 as PV1
 
 -- | Prepare @txInfoMint@ with its historical leading zero-Ada entry.
--- The entry is script-observable even though Ada cannot be forged; removing
--- it would change script data, not merely simplify an algebraic value.
+-- The Ledger mint field previously used @MaryValue@, whose translation included
+-- Ada. It now stores native-only @MultiAsset@ because Ada cannot be forged,
+-- but V1/V2 scripts still observe the old entry. Removing it could make
+-- previously successful scripts fail, despite algebraic value equivalence.
 -- Signed native quantities and their raw map entries are otherwise preserved.
 fromLedgerForging :: Forging -> PV1.Value
 fromLedgerForging (Forging m) = transCoinToValue zero <> PlutusValue.fromLedgerMultiAsset m

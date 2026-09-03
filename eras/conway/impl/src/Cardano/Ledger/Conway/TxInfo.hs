@@ -29,7 +29,6 @@ module Cardano.Ledger.Conway.TxInfo (
   transMap,
   transTxInInfoV1,
   transTxOutV1,
-  transMintValue,
   transTxBodyId,
   transValidityInterval,
   transVotingProcedures,
@@ -110,7 +109,6 @@ import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.UTxO ()
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Mary (MaryValue)
-import Cardano.Ledger.Mary.Value (MultiAsset)
 import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Plutus.Language (
   Language (..),
@@ -571,11 +569,6 @@ transTxBodyId txBody = PV3.TxId (transSafeHash (hashAnnotated @_ @EraIndependent
 
 transTxIn :: TxIn -> PV3.TxOutRef
 transTxIn (TxIn txid txIx) = PV3.TxOutRef (transTxId txid) (toInteger (txIxToInt txIx))
-
--- | Compatibility entry point for the raw Ledger mint representation.
-{-# DEPRECATED transMintValue "Use `Cardano.Ledger.Plutus.Value.Translation.V3V4.fromLedgerForging`" #-}
-transMintValue :: MultiAsset -> PV3.MintValue
-transMintValue = PlutusV3V4.fromLedgerForging . Forging
 
 -- | Translate all `Withdrawal`s from within a `TxBody`
 transTxBodyWithdrawals :: EraTxBody era => TxBody l era -> PV3.Map PV3.Credential PV3.Lovelace

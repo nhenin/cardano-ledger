@@ -25,11 +25,6 @@ module Cardano.Ledger.Alonzo.Plutus.TxInfo (
   transLookupTxOut,
   transTxOut,
   transValidityInterval,
-  transPolicyID,
-  transAssetName,
-  transMultiAsset,
-  transMintValue,
-  transValue,
   transWithdrawals,
   transDataPair,
   transTxCert,
@@ -70,9 +65,8 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Mary.Value (AssetName, MaryValue (..), MultiAsset, PolicyID)
+import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus
-import qualified Cardano.Ledger.Plutus.AssetName.Translation as PlutusAssetName
 import qualified Cardano.Ledger.Plutus.PolicyID.Translation as PlutusPolicyID
 import qualified Cardano.Ledger.Plutus.Value.Translation as PlutusValue
 import qualified Cardano.Ledger.Plutus.Value.Translation.V1V2 as PlutusV1V2
@@ -309,7 +303,11 @@ transTxOut txOut = do
   let val = txOut ^. valueTxOutL
       dataHash = txOut ^. dataHashTxOutL
   address <- transAddr (txOut ^. addrTxOutL)
-  pure $ PV1.TxOut address (transValue val) (transDataHash <$> strictMaybeToMaybe dataHash)
+  pure $
+    PV1.TxOut
+      address
+      (PlutusValue.fromLedgerMaryValue val)
+      (transDataHash <$> strictMaybeToMaybe dataHash)
 
 transTxBodyId :: EraTxBody era => TxBody l era -> PV1.TxId
 transTxBodyId txBody = PV1.TxId (transSafeHash (hashAnnotated @_ @EraIndependentTxBody txBody))
@@ -342,29 +340,6 @@ transTxBodyReqSignerHashes txBody = transKeyHash <$> Set.toList (txBody ^. reqSi
 -- | Translate all `TxDats`s from within `TxWits`
 transTxWitsDatums :: AlonzoEraTxWits era => TxWits era -> [(PV1.DatumHash, PV1.Datum)]
 transTxWitsDatums txWits = transDataPair <$> Map.toList (txWits ^. datsTxWitsL . unTxDatsL)
-
--- ==================================
--- translate Values
-
--- | Compatibility entry point for the Ledger policy identifier.
-transPolicyID :: PolicyID -> PV1.CurrencySymbol
-transPolicyID = PlutusPolicyID.fromLedgerPolicyID
-
--- | Compatibility entry point for the Ledger asset name.
-transAssetName :: AssetName -> PV1.TokenName
-transAssetName = PlutusAssetName.fromLedgerAssetName
-
--- | Compatibility entry point for the raw Ledger native-asset map.
-transMultiAsset :: MultiAsset -> PV1.Value
-transMultiAsset = PlutusValue.fromLedgerMultiAsset
-
--- | Compatibility entry point for the raw Ledger mint representation.
-{-# DEPRECATED transMintValue "Use `Cardano.Ledger.Plutus.Value.Translation.V1V2.fromLedgerForging`" #-}
-transMintValue :: MultiAsset -> PV1.Value
-transMintValue = PlutusV1V2.fromLedgerForging . Forging
-
-transValue :: MaryValue -> PV1.Value
-transValue (MaryValue c m) = transCoinToValue c <> PlutusValue.fromLedgerMultiAsset m
 
 -- =============================================
 -- translate fields like TxCert, Withdrawals, and similar

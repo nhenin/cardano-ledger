@@ -274,7 +274,12 @@ test-suite tests
     Test.Cardano.Ledger.Alonzo.GoldenSpec
     Test.Cardano.Ledger.Alonzo.GoldenTranslation
     Test.Cardano.Ledger.Alonzo.Imp.TxInfoSpec
-    Test.Cardano.Ledger.Alonzo.Plutus.AssetTranslationSpec
+    Test.Cardano.Ledger.Plutus.AssetName.TranslationSpec
+    Test.Cardano.Ledger.Plutus.PolicyID.TranslationSpec
+    Test.Cardano.Ledger.Plutus.Value.Translation.Fixtures
+    Test.Cardano.Ledger.Plutus.Value.Translation.V1V2Spec
+    Test.Cardano.Ledger.Plutus.Value.Translation.V3V4Spec
+    Test.Cardano.Ledger.Plutus.Value.TranslationSpec
 
   default-language: Haskell2010
   ghc-options:

@@ -88,6 +88,7 @@ import Cardano.Ledger.Plutus.TxInfo (
   transTxIn,
   txOutSourceToText,
  )
+import qualified Cardano.Ledger.Plutus.Value.Translation as PlutusValue
 import qualified Cardano.Ledger.Plutus.Value.Translation.V1V2 as PlutusV1V2
 import Cardano.Ledger.State (EraUTxO (..), UTxO (..))
 import Cardano.Ledger.TxIn (TxIn (..), txInToText)
@@ -161,7 +162,7 @@ transTxOutV2 txOutSource txOut = do
   case transAddr (txOut ^. addrTxOutL) of
     Nothing -> Left $ inject $ ByronTxOutInContext @era txOutSource
     Just addr ->
-      Right (PV2.TxOut addr (Alonzo.transValue val) datum referenceScript)
+      Right (PV2.TxOut addr (PlutusValue.fromLedgerMaryValue val) datum referenceScript)
 
 -- | Given a TxIn, look it up in the UTxO. If it exists, translate it to the V1 context
 transTxInInfoV1 ::
