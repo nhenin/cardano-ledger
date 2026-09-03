@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: cardano-ledger-mary
-version: 1.11.1.0
+version: 1.12.0.0
 license: Apache-2.0
 maintainer: operations@iohk.io
 author: IOHK
@@ -30,8 +30,11 @@ flag asserts
 library
   exposed-modules:
     Cardano.Ledger.Mary
+    Cardano.Ledger.Mary.AssetName
     Cardano.Ledger.Mary.Core
     Cardano.Ledger.Mary.Mint
+    Cardano.Ledger.Mary.MultiAsset
+    Cardano.Ledger.Mary.PolicyID
     Cardano.Ledger.Mary.State
     Cardano.Ledger.Mary.Transition
     Cardano.Ledger.Mary.TxBody
@@ -194,9 +197,12 @@ test-suite tests
   main-is: Main.hs
   hs-source-dirs: test
   other-modules:
+    Test.Cardano.Ledger.Mary.AssetNameSpec
     Test.Cardano.Ledger.Mary.Binary.CddlSpec
     Test.Cardano.Ledger.Mary.BinarySpec
     Test.Cardano.Ledger.Mary.MintSpec
+    Test.Cardano.Ledger.Mary.MultiAssetSpec
+    Test.Cardano.Ledger.Mary.PolicyIDSpec
     Test.Cardano.Ledger.Mary.ValueSpec
 
   default-language: Haskell2010

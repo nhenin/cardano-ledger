@@ -53,9 +53,11 @@ import Cardano.Ledger.Mary.Mint (
   burnedAssets,
   mintedAssets,
  )
+import Cardano.Ledger.Mary.MultiAsset (MultiAsset, policies)
+import Cardano.Ledger.Mary.PolicyID (PolicyID)
 import Cardano.Ledger.Mary.TxCert ()
 import Cardano.Ledger.Mary.TxOut ()
-import Cardano.Ledger.Mary.Value
+import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.MemoBytes (
   EqRaw,
   Mem,

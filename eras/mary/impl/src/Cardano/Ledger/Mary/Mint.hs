@@ -15,7 +15,7 @@ module Cardano.Ledger.Mary.Mint (
   burnedAssets,
 ) where
 
-import Cardano.Ledger.Mary.Value (MultiAsset, filterMultiAsset, mapMaybeMultiAsset)
+import Cardano.Ledger.Mary.MultiAsset (MultiAsset, filterMultiAsset, mapMaybeMultiAsset)
 import Control.DeepSeq (NFData)
 import Data.Group (Group)
 import NoThunks.Class (NoThunks)

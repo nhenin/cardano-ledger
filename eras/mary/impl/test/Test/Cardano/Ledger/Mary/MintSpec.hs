@@ -9,15 +9,11 @@ import Cardano.Ledger.Binary (serialize')
 import Cardano.Ledger.Core (TxLevel (TopTx), eraProtVerLow, mkBasicTxBody)
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Mary.AssetName (AssetName (..))
 import Cardano.Ledger.Mary.Mint
+import Cardano.Ledger.Mary.MultiAsset (MultiAsset (..), flattenMultiAsset, policies)
+import Cardano.Ledger.Mary.PolicyID (PolicyID (..))
 import Cardano.Ledger.Mary.TxBody
-import Cardano.Ledger.Mary.Value (
-  AssetName (..),
-  MultiAsset (..),
-  PolicyID (..),
-  flattenMultiAsset,
-  policies,
- )
 import Data.Group (Group (invert))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set

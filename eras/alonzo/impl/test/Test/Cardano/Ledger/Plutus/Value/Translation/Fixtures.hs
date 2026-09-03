@@ -12,7 +12,9 @@ module Test.Cardano.Ledger.Plutus.Value.Translation.Fixtures (
 ) where
 
 import Cardano.Ledger.Hashes (ScriptHash (..))
-import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
+import Cardano.Ledger.Mary.AssetName (AssetName (..))
+import Cardano.Ledger.Mary.MultiAsset (MultiAsset (..))
+import Cardano.Ledger.Mary.PolicyID (PolicyID (..))
 import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as Map
 import qualified PlutusLedgerApi.Common as P

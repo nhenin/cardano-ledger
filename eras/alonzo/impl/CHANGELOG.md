@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Require `cardano-ledger-mary >=1.12` for the new native-asset modules and their types' defining-module metadata
 * Remove the following exports from `Cardano.Ledger.Alonzo.Plutus.TxInfo`; use their replacements:
   - `transPolicyID` -> `Cardano.Ledger.Plutus.PolicyID.Translation.fromLedgerPolicyID`
   - `transAssetName` -> `Cardano.Ledger.Plutus.AssetName.Translation.fromLedgerAssetName`

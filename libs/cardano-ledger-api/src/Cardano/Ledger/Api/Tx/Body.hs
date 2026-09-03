@@ -138,13 +138,13 @@ import Cardano.Ledger.Mary.Mint (
   unBurnedAssets,
   unMintedAssets,
  )
+import Cardano.Ledger.Mary.MultiAsset (MultiAsset)
 import Cardano.Ledger.Mary.TxBody (
   burnedAssetsTxBodyF,
   forgingTxBodyL,
   mintPoliciesTxBodyF,
   mintedAssetsTxBodyF,
  )
-import Cardano.Ledger.Mary.Value (MultiAsset)
 import Cardano.Ledger.Shelley.Core (ShelleyEraTxBody (..))
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.UTxO (getProducedValue)

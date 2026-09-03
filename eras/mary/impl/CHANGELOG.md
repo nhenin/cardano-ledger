@@ -1,7 +1,11 @@
 # Version history for `cardano-ledger-mary`
 
-## 1.11.1.0
+## 1.12.0.0
 
+* Move the definitions and instances of `AssetName`, `PolicyID`, and `MultiAsset` into `Cardano.Ledger.Mary.AssetName`, `Cardano.Ledger.Mary.PolicyID`, and `Cardano.Ledger.Mary.MultiAsset`
+  - Keep existing exports through `Cardano.Ledger.Mary.Value`; `MaryValue` and its compact representation remain there
+  - Export the context-dependent quantity decoder `decodeMultiAsset` from `Cardano.Ledger.Mary.MultiAsset`; CBOR representations and protocol-version checks are unchanged
+  - The defining-module metadata of the moved types changes
 * Add `Cardano.Ledger.Mary.Mint`, re-exported by `Cardano.Ledger.Mary.Core`, with:
   - `Forging`, `MintedAssets`, and `BurnedAssets`, with their accessors
   - `mintedAssets` and `burnedAssets` projections

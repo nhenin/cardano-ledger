@@ -2,6 +2,7 @@
 
 ## 1.24.0.0
 
+* Require `cardano-ledger-mary >=1.12`; public interfaces use the native-asset types from their new Mary modules
 * Remove `transMintValue` from `Cardano.Ledger.Conway.TxInfo`; use
   `Cardano.Ledger.Plutus.Value.Translation.V3V4.fromLedgerForging` from `cardano-ledger-alonzo`.
   Wrap the former `MultiAsset` argument with `Forging` from `Cardano.Ledger.Mary.Mint`;

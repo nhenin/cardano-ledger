@@ -2,6 +2,7 @@
 
 ## 0.4.0.0
 
+* Require `cardano-ledger-mary >=1.12`; public interfaces use the native-asset types from their new Mary modules
 * Re-export the typed forging API from `Cardano.Ledger.Dijkstra.Core`:
   - `Forging`, `MintedAssets`, and `BurnedAssets`, with their accessors and projections
   - `forgingTxBodyL`, `mintedAssetsTxBodyF`, `burnedAssetsTxBodyF`, and `mintPoliciesTxBodyF`
