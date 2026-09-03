@@ -522,7 +522,7 @@ alonzoRedeemerPointer txBody = \case
   AlonzoSpending txIn ->
     AlonzoSpending <$> indexOf txIn (txBody ^. inputsTxBodyL)
   AlonzoMinting policyID ->
-    AlonzoMinting <$> indexOf policyID (txBody ^. mintedTxBodyF :: Set PolicyID)
+    AlonzoMinting <$> indexOf policyID (txBody ^. mintPoliciesTxBodyF :: Set PolicyID)
   AlonzoCertifying txCert ->
     AlonzoCertifying <$> indexOf txCert (txBody ^. certsTxBodyL)
   AlonzoWithdrawing accountAddress ->
@@ -537,7 +537,7 @@ alonzoRedeemerPointerInverse txBody = \case
   AlonzoSpending idx ->
     AlonzoSpending <$> fromIndex idx (txBody ^. inputsTxBodyL)
   AlonzoMinting idx ->
-    AlonzoMinting <$> fromIndex idx (txBody ^. mintedTxBodyF)
+    AlonzoMinting <$> fromIndex idx (txBody ^. mintPoliciesTxBodyF)
   AlonzoCertifying idx ->
     AlonzoCertifying <$> fromIndex idx (txBody ^. certsTxBodyL)
   AlonzoWithdrawing idx ->

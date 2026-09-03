@@ -647,7 +647,7 @@ conwayRedeemerPointer ::
   StrictMaybe (ConwayPlutusPurpose AsIx era)
 conwayRedeemerPointer txBody = \case
   ConwayMinting policyID ->
-    ConwayMinting <$> indexOf policyID (txBody ^. mintedTxBodyF)
+    ConwayMinting <$> indexOf policyID (txBody ^. mintPoliciesTxBodyF)
   ConwaySpending txIn ->
     ConwaySpending <$> indexOf txIn (txBody ^. inputsTxBodyL)
   ConwayWithdrawing accountAddress ->
@@ -666,7 +666,7 @@ conwayRedeemerPointerInverse ::
   StrictMaybe (ConwayPlutusPurpose AsIxItem era)
 conwayRedeemerPointerInverse txBody = \case
   ConwayMinting idx ->
-    ConwayMinting <$> fromIndex idx (txBody ^. mintedTxBodyF)
+    ConwayMinting <$> fromIndex idx (txBody ^. mintPoliciesTxBodyF)
   ConwaySpending idx ->
     ConwaySpending <$> fromIndex idx (txBody ^. inputsTxBodyL)
   ConwayWithdrawing idx ->

@@ -1066,7 +1066,7 @@ dijkstraRedeemerPointer ::
   StrictMaybe (DijkstraPlutusPurpose AsIx era)
 dijkstraRedeemerPointer txBody = \case
   DijkstraMinting policyID ->
-    DijkstraMinting <$> indexOf policyID (txBody ^. mintedTxBodyF)
+    DijkstraMinting <$> indexOf policyID (txBody ^. mintPoliciesTxBodyF)
   DijkstraSpending txIn ->
     DijkstraSpending <$> indexOf txIn (txBody ^. inputsTxBodyL)
   DijkstraWithdrawing accountAddress ->
@@ -1088,7 +1088,7 @@ dijkstraRedeemerPointerInverse ::
   StrictMaybe (DijkstraPlutusPurpose AsIxItem era)
 dijkstraRedeemerPointerInverse txBody = \case
   DijkstraMinting idx ->
-    DijkstraMinting <$> fromIndex idx (txBody ^. mintedTxBodyF)
+    DijkstraMinting <$> fromIndex idx (txBody ^. mintPoliciesTxBodyF)
   DijkstraSpending idx ->
     DijkstraSpending <$> fromIndex idx (txBody ^. inputsTxBodyL)
   DijkstraWithdrawing idx ->

@@ -106,4 +106,4 @@ getMaryScriptsNeeded u txBody =
   case getShelleyScriptsNeeded u txBody of
     ShelleyScriptsNeeded shelleyScriptsNeeded ->
       ShelleyScriptsNeeded $
-        shelleyScriptsNeeded `Set.union` Set.map policyID (txBody ^. mintedTxBodyF)
+        shelleyScriptsNeeded `Set.union` Set.map policyID (txBody ^. mintPoliciesTxBodyF)
