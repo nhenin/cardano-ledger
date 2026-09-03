@@ -106,7 +106,8 @@ import Cardano.Ledger.Dijkstra.TxCert (DijkstraTxCertUpgradeError)
 import Cardano.Ledger.Internal.Era (EraHasName (..))
 import Cardano.Ledger.Keys (HasKeyRole (..))
 import Cardano.Ledger.Mary (MaryEra, TxBody (..))
-import Cardano.Ledger.Mary.TxBody (MaryEraTxBody (..))
+import Cardano.Ledger.Mary.Mint (Forging (..))
+import Cardano.Ledger.Mary.TxBody (forgingTxBodyL)
 import Cardano.Ledger.MemoBytes (getMemoRawType, mkMemoizedEra)
 import Cardano.Ledger.Plutus.Data (upgradeData)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -489,7 +490,7 @@ instance EraApi BabbageEra where
             , btbValidityInterval = txBody ^. vldtTxBodyL
             , btbUpdate = updates
             , btbAuxDataHash = txBody ^. auxDataHashTxBodyL
-            , btbMint = txBody ^. mintTxBodyL
+            , btbMint = unForging (txBody ^. forgingTxBodyL)
             , btbCollateral = txBody ^. collateralInputsTxBodyL
             , btbReqSignerHashes = txBody ^. reqSignerHashesTxBodyL
             , btbScriptIntegrityHash = txBody ^. scriptIntegrityHashTxBodyL
