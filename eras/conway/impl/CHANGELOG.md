@@ -2,6 +2,7 @@
 
 ## 1.24.0.0
 
+* Remove re-exported `mintTxBodyL`, `mintedTxBodyF`, and `mintValueTxBodyF`; use the typed forging API from `Cardano.Ledger.Mary.Core`
 * Require `cardano-ledger-mary >=1.12`; public interfaces use the native-asset types from their new Mary modules
 * Remove `transMintValue` from `Cardano.Ledger.Conway.TxInfo`; use
   `Cardano.Ledger.Plutus.Value.Translation.V3V4.fromLedgerForging` from `cardano-ledger-alonzo`.
@@ -9,7 +10,7 @@
   the Plutus V3/V4 native-only `MintValue` representation is preserved.
 * Re-export the typed forging API from `Cardano.Ledger.Conway.Core`:
   - `Forging`, `MintedAssets`, and `BurnedAssets`, with their accessors and projections
-  - `forgingTxBodyL`, `mintedAssetsTxBodyF`, `burnedAssetsTxBodyF`, and `mintPoliciesTxBodyF`
+  - `forgingTxBodyL`, `mintedAssetsTxBodyF`, `burnedAssetsTxBodyF`, and `forgingPoliciesTxBodyF`
 * Replace `StakeKeyRegisteredDELEG` constructor with `DelegAccountAlreadyRegistered` in `ConwayDelegPredFailure`, which wraps the new `AccountAlreadyRegistered` type instead of `Credential Staking`
 * Change `toPlutusV3Args` to accept `LedgerTxInfo era` and `ScriptHash` arguments instead of `ProtVer` and `Maybe (Data era)`
 * Change `transPlutusPurposeV3` and `transPlutusPurposeV1V2` to accept an extra `()` argument for `PlutusPurposeScriptHashArg`

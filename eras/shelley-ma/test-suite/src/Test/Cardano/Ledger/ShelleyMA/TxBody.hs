@@ -18,6 +18,7 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Mary.Forging (Forging (..))
 import Cardano.Ledger.Mary.TxBody (MaryEraTxBody (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.MemoBytes (getMemoRawBytes)
@@ -43,7 +44,7 @@ txM =
   mkBasicTxBody
     & feeTxBodyL .~ Coin 6
     & vldtTxBodyL .~ ValidityInterval (SJust (SlotNo 3)) (SJust (SlotNo 42))
-    & mintTxBodyL .~ testMint
+    & forgingTxBodyL .~ Forging testMint
 
 testMint :: MultiAsset
 testMint = MultiAsset $ Map.singleton policyId (Map.singleton aname 2)
@@ -67,7 +68,7 @@ fieldTests =
           ValidityInterval (SJust (SlotNo 3)) (SJust (SlotNo 42))
     , testCase "update" (assertEqual "update" (txM ^. updateTxBodyL) SNothing)
     , testCase "adHash" (assertEqual "adHash" (txM ^. auxDataHashTxBodyL) SNothing)
-    , testCase "mint" (assertEqual "mint" (txM ^. mintTxBodyL) testMint)
+    , testCase "forging" (assertEqual "forging" (txM ^. forgingTxBodyL) (Forging testMint))
     ]
 
 txBodyTest :: TestTree

@@ -2,10 +2,11 @@
 
 ## 0.4.0.0
 
+* Remove re-exported `mintTxBodyL`, `mintedTxBodyF`, and `mintValueTxBodyF`; use the typed forging API from `Cardano.Ledger.Mary.Core`
 * Require `cardano-ledger-mary >=1.12`; public interfaces use the native-asset types from their new Mary modules
 * Re-export the typed forging API from `Cardano.Ledger.Dijkstra.Core`:
   - `Forging`, `MintedAssets`, and `BurnedAssets`, with their accessors and projections
-  - `forgingTxBodyL`, `mintedAssetsTxBodyF`, `burnedAssetsTxBodyF`, and `mintPoliciesTxBodyF`
+  - `forgingTxBodyL`, `mintedAssetsTxBodyF`, `burnedAssetsTxBodyF`, and `forgingPoliciesTxBodyF`
 * Add `localProducedValue` helper in `UTxO` module
 * Add `ValueNotConservedInLegacyInLegacyMode` constructor to `DijkstraUtxoPredFailure`
 * Rename:

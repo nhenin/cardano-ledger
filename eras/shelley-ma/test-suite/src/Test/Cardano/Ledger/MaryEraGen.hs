@@ -303,7 +303,7 @@ genTxBody pparams slot ins outs cert wdrl fee upd meta = do
         & vldtTxBodyL .~ validityInterval
         & updateTxBodyL .~ upd
         & auxDataHashTxBodyL .~ meta
-        & mintTxBodyL .~ mint'
+        & forgingTxBodyL .~ Forging mint'
     , ps -- These additional scripts are for the minting policies.
     )
 

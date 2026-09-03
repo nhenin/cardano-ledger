@@ -189,7 +189,7 @@ alonzoToConwaySpec = do
               mkBasicTxBody
                 & inputsTxBodyL .~ fromList txIns
                 & vldtTxBodyL .~ ValidityInterval SNothing (SJust $ slotNo + 1)
-                & mintTxBodyL .~ multiAsset
+                & forgingTxBodyL .~ Forging multiAsset
                 & withdrawalsTxBodyL .~ Withdrawals (fromList [(acct, mempty) | acct <- rewardAccounts])
                 & certsTxBodyL .~ fromList (UnRegTxCert . ScriptHashObj <$> rewardScriptHashes)
                 & outputsTxBodyL .~ [txOut]

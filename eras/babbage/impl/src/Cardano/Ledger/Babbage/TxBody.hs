@@ -314,9 +314,10 @@ instance AllegraEraTxBody BabbageEra where
   {-# INLINE vldtTxBodyL #-}
 
 instance MaryEraTxBody BabbageEra where
-  mintTxBodyL =
-    lensMemoRawType @BabbageEra (\BabbageTxBodyRaw {btbrMint} -> btbrMint) $ \txBodyRaw mint -> txBodyRaw {btbrMint = mint}
-  {-# INLINE mintTxBodyL #-}
+  forgingTxBodyL =
+    lensMemoRawType @BabbageEra (\BabbageTxBodyRaw {btbrMint} -> Forging btbrMint) $
+      \txBodyRaw (Forging mint) -> txBodyRaw {btbrMint = mint}
+  {-# INLINE forgingTxBodyL #-}
 
 instance AlonzoEraTxBody BabbageEra where
   collateralInputsTxBodyL =

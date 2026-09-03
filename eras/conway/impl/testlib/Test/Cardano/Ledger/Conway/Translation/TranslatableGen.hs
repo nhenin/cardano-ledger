@@ -101,7 +101,7 @@ genTxBody l@(SupportedLanguage slang) = do
       & feeTxBodyL .~ fee
       & vldtTxBodyL .~ vldt
       & reqSignerHashesTxBodyL .~ reqSignerHashes
-      & mintTxBodyL .~ mint
+      & forgingTxBodyL .~ Forging mint
       & scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
       & auxDataHashTxBodyL .~ adHash
       & networkIdTxBodyL .~ txNetworkId

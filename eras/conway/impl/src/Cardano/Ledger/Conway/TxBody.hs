@@ -396,9 +396,9 @@ instance AllegraEraTxBody ConwayEra where
   {-# INLINE vldtTxBodyL #-}
 
 instance MaryEraTxBody ConwayEra where
-  mintTxBodyL = lensMemoRawType @ConwayEra (\ConwayTxBodyRaw {ctbrMint} -> ctbrMint) $
-    \txb x -> txb {ctbrMint = x}
-  {-# INLINE mintTxBodyL #-}
+  forgingTxBodyL = lensMemoRawType @ConwayEra (\ConwayTxBodyRaw {ctbrMint} -> Forging ctbrMint) $
+    \txBodyRaw (Forging mint) -> txBodyRaw {ctbrMint = mint}
+  {-# INLINE forgingTxBodyL #-}
 
 instance AlonzoEraTxBody ConwayEra where
   collateralInputsTxBodyL =
@@ -647,7 +647,7 @@ conwayRedeemerPointer ::
   StrictMaybe (ConwayPlutusPurpose AsIx era)
 conwayRedeemerPointer txBody = \case
   ConwayMinting policyID ->
-    ConwayMinting <$> indexOf policyID (txBody ^. mintPoliciesTxBodyF)
+    ConwayMinting <$> indexOf policyID (txBody ^. forgingPoliciesTxBodyF)
   ConwaySpending txIn ->
     ConwaySpending <$> indexOf txIn (txBody ^. inputsTxBodyL)
   ConwayWithdrawing accountAddress ->
@@ -666,7 +666,7 @@ conwayRedeemerPointerInverse ::
   StrictMaybe (ConwayPlutusPurpose AsIxItem era)
 conwayRedeemerPointerInverse txBody = \case
   ConwayMinting idx ->
-    ConwayMinting <$> fromIndex idx (txBody ^. mintPoliciesTxBodyF)
+    ConwayMinting <$> fromIndex idx (txBody ^. forgingPoliciesTxBodyF)
   ConwaySpending idx ->
     ConwaySpending <$> fromIndex idx (txBody ^. inputsTxBodyL)
   ConwayWithdrawing idx ->

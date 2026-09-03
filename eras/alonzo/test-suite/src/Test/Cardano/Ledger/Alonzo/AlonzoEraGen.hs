@@ -318,7 +318,7 @@ genAlonzoTxBody _genenv utxo pparams currentslot input txOuts certs withdrawals 
         & vldtTxBodyL .~ validityInterval
         & updateTxBodyL .~ updates
         & reqSignerHashesTxBodyL .~ Set.empty -- TODO do something better here
-        & mintTxBodyL .~ minted2
+        & forgingTxBodyL .~ Forging minted2
         -- scriptIntegrityHash starts out with empty Redeemers,
         -- as Remdeemers are added it is recomputed in updateEraTxBody
         & scriptIntegrityHashTxBodyL

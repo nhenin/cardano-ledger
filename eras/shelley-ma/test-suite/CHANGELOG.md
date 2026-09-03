@@ -2,7 +2,7 @@
 
 ## 1.4.0.3
 
-*
+* Require `cardano-ledger-mary >=1.12` for the typed forging interface used by transaction generators
 
 ## 1.4.0.2
 

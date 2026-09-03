@@ -199,7 +199,7 @@ spec = describe "UTXO" $ do
               submitTx $
                 mkBasicTx $
                   mkBasicTxBody
-                    & mintTxBodyL .~ tokens (topBurnAmount + subBurnAmount)
+                    & forgingTxBodyL .~ Forging (tokens (topBurnAmount + subBurnAmount))
                     & outputsTxBodyL
                       .~ [ mkBasicTxOut tokenAddr (MaryValue mempty (tokens topBurnAmount))
                          , mkBasicTxOut tokenAddr (MaryValue mempty (tokens subBurnAmount))
@@ -213,7 +213,7 @@ spec = describe "UTXO" $ do
                     mkBasicTxBody
                       & inputsTxBodyL .~ [txInAt (1 :: Int) mintTx]
                       & outputsTxBodyL .~ [subOut]
-                      & mintTxBodyL .~ tokens (negate subBurnAmount)
+                      & forgingTxBodyL .~ Forging (tokens (negate subBurnAmount))
                 topTx :: Tx TopTx era
                 topTx =
                   mkBasicTx $
@@ -221,7 +221,7 @@ spec = describe "UTXO" $ do
                       & inputsTxBodyL .~ [txInAt (0 :: Int) mintTx]
                       & outputsTxBodyL .~ [topOut]
                       & feeTxBodyL .~ topFee
-                      & mintTxBodyL .~ tokens (negate topBurnAmount)
+                      & forgingTxBodyL .~ Forging (tokens (negate topBurnAmount))
                       & subTransactionsTxBodyL .~ [subTx]
                 expected =
                   MaryValue

@@ -2,10 +2,11 @@
 
 ## 1.15.0.0
 
+* Remove re-exported `mintTxBodyL`, `mintedTxBodyF`, and `mintValueTxBodyF`; use the typed forging API from `Cardano.Ledger.Mary.Core`
 * Require `cardano-ledger-mary >=1.12`; public interfaces use the native-asset types from their new Mary modules
 * Re-export the typed forging API from `Cardano.Ledger.Babbage.Core`:
   - `Forging`, `MintedAssets`, and `BurnedAssets`, with their accessors and projections
-  - `forgingTxBodyL`, `mintedAssetsTxBodyF`, `burnedAssetsTxBodyF`, and `mintPoliciesTxBodyF`
+  - `forgingTxBodyL`, `mintedAssetsTxBodyF`, `burnedAssetsTxBodyF`, and `forgingPoliciesTxBodyF`
 * Change `transTxRedeemers` to accept a `UTxO era` argument
 * Change `toPlutusV2Args` to accept `LedgerTxInfo era` and `ScriptHash` arguments instead of `ProtVer` and `Maybe (Data era)`
 * Rename `transRedeemerPtr` to `transRedeemerPointerV2V3`

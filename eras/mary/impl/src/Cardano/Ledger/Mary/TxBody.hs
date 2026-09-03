@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -21,10 +20,9 @@
 
 module Cardano.Ledger.Mary.TxBody (
   MaryEraTxBody (..),
-  forgingTxBodyL,
   mintedAssetsTxBodyF,
   burnedAssetsTxBodyF,
-  mintPoliciesTxBodyF,
+  forgingPoliciesTxBodyF,
   TxBody (
     MkMaryTxBody,
     MaryTxBody,
@@ -57,7 +55,6 @@ import Cardano.Ledger.Mary.MultiAsset (MultiAsset, policies)
 import Cardano.Ledger.Mary.PolicyID (PolicyID)
 import Cardano.Ledger.Mary.TxCert ()
 import Cardano.Ledger.Mary.TxOut ()
-import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.MemoBytes (
   EqRaw,
   Mem,
@@ -81,27 +78,10 @@ import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 class AllegraEraTxBody era => MaryEraTxBody era where
-  mintTxBodyL :: Lens' (TxBody l era) MultiAsset
-
-  -- TODO: extract away from this type class into a standalone getter
-  mintedTxBodyF :: SimpleGetter (TxBody l era) (Set PolicyID)
-  mintedTxBodyF = mintTxBodyL . to policies
-  {-# INLINE mintedTxBodyF #-}
-
-  mintValueTxBodyF :: SimpleGetter (TxBody l era) (Value era)
-  default mintValueTxBodyF :: Value era ~ MaryValue => SimpleGetter (TxBody l era) (Value era)
-  mintValueTxBodyF = mintTxBodyL . to (MaryValue mempty)
-  {-# INLINE mintValueTxBodyF #-}
-
--- | A typed view of the signed native-asset quantities in the mint field.
--- The underlying transaction representation and wire encoding remain
--- 'MultiAsset'.
-forgingTxBodyL :: MaryEraTxBody era => Lens' (TxBody l era) Forging
-forgingTxBodyL =
-  lens
-    (\txBody -> Forging (txBody ^. mintTxBodyL))
-    (\txBody (Forging mint) -> set mintTxBodyL mint txBody)
-{-# INLINE forgingTxBodyL #-}
+  -- | Declared native-asset creation and destruction. Implementations retain
+  -- the raw 'MultiAsset', including zeros and empty policies, without changing
+  -- the transaction's wire representation or validating its policies.
+  forgingTxBodyL :: Lens' (TxBody l era) Forging
 
 -- | The positive native-asset quantities minted by the transaction.
 mintedAssetsTxBodyF :: MaryEraTxBody era => SimpleGetter (TxBody l era) MintedAssets
@@ -113,12 +93,12 @@ burnedAssetsTxBodyF :: MaryEraTxBody era => SimpleGetter (TxBody l era) BurnedAs
 burnedAssetsTxBodyF = forgingTxBodyL . to burnedAssets
 {-# INLINE burnedAssetsTxBodyF #-}
 
--- | Policies referenced by the mint field, whether assets are minted or burned.
+-- | Policies referenced by the forging declaration, whether assets are minted or burned.
 -- Retain policies with only zero quantities or no assets, as the raw field
 -- does; deriving this set from the positive projections would lose them.
-mintPoliciesTxBodyF :: MaryEraTxBody era => SimpleGetter (TxBody l era) (Set PolicyID)
-mintPoliciesTxBodyF = forgingTxBodyL . to (policies . unForging)
-{-# INLINE mintPoliciesTxBodyF #-}
+forgingPoliciesTxBodyF :: MaryEraTxBody era => SimpleGetter (TxBody l era) (Set PolicyID)
+forgingPoliciesTxBodyF = forgingTxBodyL . to (policies . unForging)
+{-# INLINE forgingPoliciesTxBodyF #-}
 
 -- ===========================================================================
 -- Wrap it all up in a newtype, hiding the insides with a pattern constructor.
@@ -273,8 +253,8 @@ instance AllegraEraTxBody MaryEra where
   {-# INLINEABLE vldtTxBodyL #-}
 
 instance MaryEraTxBody MaryEra where
-  mintTxBodyL =
+  forgingTxBodyL =
     lensMemoRawType @MaryEra
-      (\AllegraTxBodyRaw {atbrMint} -> atbrMint)
-      (\txBodyRaw mint -> txBodyRaw {atbrMint = mint})
-  {-# INLINEABLE mintTxBodyL #-}
+      (\AllegraTxBodyRaw {atbrMint} -> Forging atbrMint)
+      (\txBodyRaw (Forging mint) -> txBodyRaw {atbrMint = mint})
+  {-# INLINEABLE forgingTxBodyL #-}

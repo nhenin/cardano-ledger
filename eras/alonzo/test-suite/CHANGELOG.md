@@ -2,7 +2,7 @@
 
 ## 1.4.0.2
 
-*
+* Require `cardano-ledger-alonzo >=1.17` for the typed forging interface used by transaction generators
 
 ## 1.4.0.1
 

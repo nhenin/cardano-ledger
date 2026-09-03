@@ -1,10 +1,12 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Mary.ForgingSpec (spec) where
 
+import Cardano.Ledger.Allegra.TxBody (AllegraTxBodyRaw (atbrMint))
 import Cardano.Ledger.Binary (serialize')
 import Cardano.Ledger.Core (TxLevel (TopTx), eraProtVerLow, mkBasicTxBody)
 import Cardano.Ledger.Hashes (ScriptHash (..))
@@ -14,6 +16,7 @@ import Cardano.Ledger.Mary.Forging
 import Cardano.Ledger.Mary.MultiAsset (MultiAsset (..), flattenMultiAsset, policies)
 import Cardano.Ledger.Mary.PolicyID (PolicyID (..))
 import Cardano.Ledger.Mary.TxBody
+import Cardano.Ledger.MemoBytes (getMemoRawType, mkMemoizedEra)
 import Data.Group (Group (invert))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -38,38 +41,39 @@ spec = describe "Forging" $ do
           flattenMultiAsset (unMintedAssets (mintedAssets forging)) `shouldBe` []
           flattenMultiAsset (unBurnedAssets (burnedAssets forging)) `shouldBe` []
 
-  prop "transaction-body views preserve the existing mint lens" $ \(multiAsset :: MultiAsset) ->
+  prop "transaction-body projections agree with the raw mint field" $ \(multiAsset :: MultiAsset) ->
     let forging = Forging multiAsset
         txBody = mkBasicTxBody @MaryEra @TopTx & forgingTxBodyL .~ forging
      in do
-          txBody ^. mintTxBodyL `shouldBe` multiAsset
+          mtbMint txBody `shouldBe` multiAsset
           unForging (txBody ^. forgingTxBodyL) `shouldBe` multiAsset
           txBody ^. mintedAssetsTxBodyF `shouldBe` mintedAssets forging
           txBody ^. burnedAssetsTxBodyF `shouldBe` burnedAssets forging
-          txBody ^. mintPoliciesTxBodyF `shouldBe` policies multiAsset
-          txBody ^. mintedTxBodyF `shouldBe` policies multiAsset
+          txBody ^. forgingPoliciesTxBodyF `shouldBe` policies multiAsset
 
   describe "Raw mint representation" $
     forM_ rawMintFixtures $ \(scenarioName, expectedMap, expectedPolicies) -> describe scenarioName $ do
       let
         rawMint = MultiAsset expectedMap
-        legacyBody = mkBasicTxBody @MaryEra @TopTx & mintTxBodyL .~ rawMint
-        forgingBody = mkBasicTxBody @MaryEra @TopTx & forgingTxBodyL .~ Forging rawMint
+        basicBody = mkBasicTxBody @MaryEra @TopTx
+        rawBody :: TxBody TopTx MaryEra
+        rawBody = mkMemoizedEra @MaryEra $ (getMemoRawType basicBody) {atbrMint = rawMint}
+        forgingBody = basicBody & forgingTxBodyL .~ Forging rawMint
 
       it "preserves raw zero quantities and empty policy maps" $ do
         -- Compare the nested maps directly: MultiAsset equality disregards
         -- zero/empty distinctions that the representation must retain.
-        rawMap (forgingBody ^. mintTxBodyL) `shouldBe` expectedMap
+        rawMap (mtbMint forgingBody) `shouldBe` expectedMap
         rawMap (unForging (forgingBody ^. forgingTxBodyL)) `shouldBe` expectedMap
-        rawMap (unForging (legacyBody ^. forgingTxBodyL)) `shouldBe` expectedMap
+        rawMap (unForging (rawBody ^. forgingTxBodyL)) `shouldBe` expectedMap
 
-      it "matches the legacy mint lens's transaction-body bytes" $
+      it "matches transaction-body bytes built from the raw mint field" $
         serialize' (eraProtVerLow @MaryEra) forgingBody
-          `shouldBe` serialize' (eraProtVerLow @MaryEra) legacyBody
+          `shouldBe` serialize' (eraProtVerLow @MaryEra) rawBody
 
       it "retains policies with only zero quantities or no assets" $ do
-        forgingBody ^. mintPoliciesTxBodyF `shouldBe` expectedPolicies
-        legacyBody ^. mintedTxBodyF `shouldBe` expectedPolicies
+        forgingBody ^. forgingPoliciesTxBodyF `shouldBe` expectedPolicies
+        rawBody ^. forgingPoliciesTxBodyF `shouldBe` expectedPolicies
 
 rawMintFixtures :: [(String, Map.Map PolicyID (Map.Map AssetName Integer), Set.Set PolicyID)]
 rawMintFixtures =
@@ -80,12 +84,19 @@ rawMintFixtures =
     , zeroEntry <> emptyEntry
     , Set.fromList [zeroPolicy, emptyPolicy]
     )
+  ,
+    ( "mint, burn, zero quantity and empty policy map"
+    , signedEntry <> zeroEntry <> emptyEntry
+    , Set.fromList [signedPolicy, zeroPolicy, emptyPolicy]
+    )
   ]
   where
     zeroPolicy = PolicyID (ScriptHash "00000000000000000000000000000000000000000000000000000000")
     emptyPolicy = PolicyID (ScriptHash "01010101010101010101010101010101010101010101010101010101")
+    signedPolicy = PolicyID (ScriptHash "02020202020202020202020202020202020202020202020202020202")
     zeroEntry = Map.singleton zeroPolicy (Map.singleton (AssetName "zero") 0)
     emptyEntry = Map.singleton emptyPolicy Map.empty
+    signedEntry = Map.singleton signedPolicy (Map.fromList [(AssetName "mint", 10), (AssetName "burn", -3)])
 
 rawMap :: MultiAsset -> Map.Map PolicyID (Map.Map AssetName Integer)
 rawMap (MultiAsset entries) = entries

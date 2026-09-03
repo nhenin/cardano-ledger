@@ -409,7 +409,7 @@ goldenEncodingTestsMary =
                 & vldtTxBodyL .~ ValidityInterval (SJust $ SlotNo 500) (SJust $ SlotNo 600)
                 & updateTxBodyL .~ SJust up
                 & auxDataHashTxBodyL .~ SJust mdh
-                & mintTxBodyL .~ MultiAsset mint
+                & forgingTxBodyL .~ Forging (MultiAsset mint)
             )
             ( T (TkMapLen 10)
                 <> T (TkWord 0) -- Tx Ins

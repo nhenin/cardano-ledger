@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Remove re-exported `mintTxBodyL`, `mintedTxBodyF`, and `mintValueTxBodyF`; use the typed forging API from `Cardano.Ledger.Mary.Core`
 * Require `cardano-ledger-mary >=1.12` for the new native-asset modules and their types' defining-module metadata
 * Remove the following exports from `Cardano.Ledger.Alonzo.Plutus.TxInfo`; use their replacements:
   - `transPolicyID` -> `Cardano.Ledger.Plutus.PolicyID.Translation.fromLedgerPolicyID`
@@ -13,7 +14,7 @@
     the Plutus V1/V2 zero-Ada entry is preserved)
 * Re-export the typed forging API from `Cardano.Ledger.Alonzo.Core`:
   - `Forging`, `MintedAssets`, and `BurnedAssets`, with their accessors and projections
-  - `forgingTxBodyL`, `mintedAssetsTxBodyF`, `burnedAssetsTxBodyF`, and `mintPoliciesTxBodyF`
+  - `forgingTxBodyL`, `mintedAssetsTxBodyF`, `burnedAssetsTxBodyF`, and `forgingPoliciesTxBodyF`
 * Add `Cardano.Ledger.Plutus.Value.Translation` with `fromLedgerMultiAsset` and `fromLedgerMaryValue`
 * Add `Cardano.Ledger.Plutus.Value.Translation.V1V2` and `.V3V4`, each exposing `fromLedgerForging`
 * Add `Cardano.Ledger.Plutus.PolicyID.Translation` with `fromLedgerPolicyID`

@@ -81,7 +81,7 @@ exampleMaryBasedTx =
       <>~ StrictSeq.fromList
         [ mkBasicTxOut (mkAddr examplePayKey exampleStakeKey) $ exampleMultiAssetValue 1
         ]
-    & bodyTxL . mintTxBodyL .~ exampleMultiAsset 1
+    & bodyTxL . forgingTxBodyL .~ Forging (exampleMultiAsset 1)
 
 exampleMultiAssetValue :: Int -> MaryValue
 exampleMultiAssetValue x = MaryValue (Coin 100) $ exampleMultiAsset x

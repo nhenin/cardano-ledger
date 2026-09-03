@@ -50,13 +50,10 @@ module Cardano.Ledger.Api.Tx.Body (
   unBurnedAssets,
   mintedAssets,
   burnedAssets,
-  mintTxBodyL,
-  mintValueTxBodyF,
-  mintedTxBodyF,
   forgingTxBodyL,
   mintedAssetsTxBodyF,
   burnedAssetsTxBodyF,
-  mintPoliciesTxBodyF,
+  forgingPoliciesTxBodyF,
 
   -- * Alonzo Era
   AlonzoEraTxBody,
@@ -138,11 +135,9 @@ import Cardano.Ledger.Mary.Forging (
   unBurnedAssets,
   unMintedAssets,
  )
-import Cardano.Ledger.Mary.MultiAsset (MultiAsset)
 import Cardano.Ledger.Mary.TxBody (
   burnedAssetsTxBodyF,
-  forgingTxBodyL,
-  mintPoliciesTxBodyF,
+  forgingPoliciesTxBodyF,
   mintedAssetsTxBodyF,
  )
 import Cardano.Ledger.Shelley.Core (ShelleyEraTxBody (..))
@@ -167,10 +162,12 @@ class (EraTxBody era, AnyEraTxOut era, AnyEraTxCert era) => AnyEraTxBody era whe
     AllegraEraTxBody era => SimpleGetter (TxBody TopTx era) ValidityInterval
   vldtTxBodyG = vldtTxBodyL
 
-  mintTxBodyG :: SimpleGetter (TxBody l era) (Maybe MultiAsset)
-  default mintTxBodyG ::
-    MaryEraTxBody era => SimpleGetter (TxBody l era) (Maybe MultiAsset)
-  mintTxBodyG = mintTxBodyL . to Just
+  -- | Nothing before Mary; otherwise the declared forging, including an empty
+  -- declaration. An empty declaration is distinct from an unsupported field.
+  forgingTxBodyG :: SimpleGetter (TxBody l era) (Maybe Forging)
+  default forgingTxBodyG ::
+    MaryEraTxBody era => SimpleGetter (TxBody l era) (Maybe Forging)
+  forgingTxBodyG = forgingTxBodyL . to Just
 
   collateralInputsTxBodyG :: SimpleGetter (TxBody TopTx era) (Maybe (Set TxIn))
   default collateralInputsTxBodyG ::
@@ -251,7 +248,7 @@ class (EraTxBody era, AnyEraTxOut era, AnyEraTxCert era) => AnyEraTxBody era whe
 instance AnyEraTxBody ShelleyEra where
   updateTxBodyG = updateTxBodyL . to (Just . strictMaybeToMaybe)
   vldtTxBodyG = ttlTxBodyL . to ttlToValidityInterval
-  mintTxBodyG = to (const Nothing)
+  forgingTxBodyG = to (const Nothing)
   collateralInputsTxBodyG = to (const Nothing)
   scriptIntegrityHashTxBodyG = to (const Nothing)
   networkIdTxBodyG = to (const Nothing)
@@ -268,7 +265,7 @@ instance AnyEraTxBody ShelleyEra where
 
 instance AnyEraTxBody AllegraEra where
   updateTxBodyG = updateTxBodyL . to (Just . strictMaybeToMaybe)
-  mintTxBodyG = to (const Nothing)
+  forgingTxBodyG = to (const Nothing)
   collateralInputsTxBodyG = to (const Nothing)
   scriptIntegrityHashTxBodyG = to (const Nothing)
   networkIdTxBodyG = to (const Nothing)

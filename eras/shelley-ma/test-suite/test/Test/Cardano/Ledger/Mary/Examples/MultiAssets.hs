@@ -110,7 +110,7 @@ makeMaryTxBody ins outs interval minted =
     & outputsTxBodyL .~ StrictSeq.fromList outs
     & feeTxBodyL .~ feeEx
     & vldtTxBodyL .~ interval
-    & mintTxBodyL .~ minted
+    & forgingTxBodyL .~ Forging minted
 
 policyFailure ::
   PolicyID -> Either (NonEmpty (PredicateFailure (Shelley.LEDGER MaryEra))) (UTxO MaryEra)

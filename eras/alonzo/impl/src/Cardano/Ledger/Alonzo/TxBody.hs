@@ -274,10 +274,10 @@ instance AllegraEraTxBody AlonzoEra where
   {-# INLINEABLE vldtTxBodyL #-}
 
 instance MaryEraTxBody AlonzoEra where
-  mintTxBodyL =
-    lensMemoRawType @AlonzoEra (\AlonzoTxBodyRaw {atbrMint} -> atbrMint) $
-      \txBodyRaw mint_ -> txBodyRaw {atbrMint = mint_}
-  {-# INLINEABLE mintTxBodyL #-}
+  forgingTxBodyL =
+    lensMemoRawType @AlonzoEra (\AlonzoTxBodyRaw {atbrMint} -> Forging atbrMint) $
+      \txBodyRaw (Forging mint) -> txBodyRaw {atbrMint = mint}
+  {-# INLINEABLE forgingTxBodyL #-}
 
 instance AlonzoEraTxBody AlonzoEra where
   collateralInputsTxBodyL =
@@ -522,7 +522,7 @@ alonzoRedeemerPointer txBody = \case
   AlonzoSpending txIn ->
     AlonzoSpending <$> indexOf txIn (txBody ^. inputsTxBodyL)
   AlonzoMinting policyID ->
-    AlonzoMinting <$> indexOf policyID (txBody ^. mintPoliciesTxBodyF :: Set PolicyID)
+    AlonzoMinting <$> indexOf policyID (txBody ^. forgingPoliciesTxBodyF :: Set PolicyID)
   AlonzoCertifying txCert ->
     AlonzoCertifying <$> indexOf txCert (txBody ^. certsTxBodyL)
   AlonzoWithdrawing accountAddress ->
@@ -537,7 +537,7 @@ alonzoRedeemerPointerInverse txBody = \case
   AlonzoSpending idx ->
     AlonzoSpending <$> fromIndex idx (txBody ^. inputsTxBodyL)
   AlonzoMinting idx ->
-    AlonzoMinting <$> fromIndex idx (txBody ^. mintPoliciesTxBodyF)
+    AlonzoMinting <$> fromIndex idx (txBody ^. forgingPoliciesTxBodyF)
   AlonzoCertifying idx ->
     AlonzoCertifying <$> fromIndex idx (txBody ^. certsTxBodyL)
   AlonzoWithdrawing idx ->

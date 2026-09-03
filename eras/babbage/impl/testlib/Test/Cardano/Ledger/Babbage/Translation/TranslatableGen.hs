@@ -142,7 +142,7 @@ genTxBody l@(SupportedLanguage slang) = do
       & vldtTxBodyL .~ vldt
       & updateTxBodyL .~ update
       & reqSignerHashesTxBodyL .~ reqSignerHashes
-      & mintTxBodyL .~ mint
+      & forgingTxBodyL .~ Forging mint
       & scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
       & auxDataHashTxBodyL .~ adHash
       & networkIdTxBodyL .~ txNetworkId

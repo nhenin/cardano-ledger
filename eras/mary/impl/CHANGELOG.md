@@ -2,6 +2,9 @@
 
 ## 1.12.0.0
 
+* Replace `MaryEraTxBody.mintTxBodyL` with `forgingTxBodyL`, whose target is `Forging`; era instances must implement the typed lens. Raw transaction fields and CBOR encoding remain unchanged
+* Remove `mintedTxBodyF`; use the standalone `forgingPoliciesTxBodyF` for policies involved in either minting or burning
+* Remove `mintValueTxBodyF`; use `forgingTxBodyL` for signed quantities, or `mintedAssetsTxBodyF` / `burnedAssetsTxBodyF` for positive accounting magnitudes
 * Move the definitions and instances of `AssetName`, `PolicyID`, and `MultiAsset` into `Cardano.Ledger.Mary.AssetName`, `Cardano.Ledger.Mary.PolicyID`, and `Cardano.Ledger.Mary.MultiAsset`
   - Keep existing exports through `Cardano.Ledger.Mary.Value`; `MaryValue` and its compact representation remain there
   - Export the context-dependent quantity decoder `decodeMultiAsset` from `Cardano.Ledger.Mary.MultiAsset`; CBOR representations and protocol-version checks are unchanged
@@ -9,7 +12,7 @@
 * Add `Cardano.Ledger.Mary.Forging`, re-exported by `Cardano.Ledger.Mary.Core`, with:
   - `Forging`, `MintedAssets`, and `BurnedAssets`, with their accessors
   - `mintedAssets` and `burnedAssets` projections
-* Add `forgingTxBodyL`, `mintedAssetsTxBodyF`, `burnedAssetsTxBodyF`, and `mintPoliciesTxBodyF` to `Cardano.Ledger.Mary.TxBody`, re-exported by `Cardano.Ledger.Mary.Core`
+* Add `mintedAssetsTxBodyF`, `burnedAssetsTxBodyF`, and `forgingPoliciesTxBodyF` to `Cardano.Ledger.Mary.TxBody`, re-exported by `Cardano.Ledger.Mary.Core`
 * Add `EncCBOR`, `ToCBOR` for `Block`
 * Add `DecCBOR` instances for `Annotator Block`
 

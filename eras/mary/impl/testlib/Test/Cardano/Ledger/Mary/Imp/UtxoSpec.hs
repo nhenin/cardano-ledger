@@ -34,7 +34,7 @@ mintBasicToken = do
       txBody =
         mkBasicTxBody
           & outputsTxBodyL .~ [mkBasicTxOut addr txValue]
-          & mintTxBodyL .~ txAsset
+          & forgingTxBodyL .~ Forging txAsset
   submitTx $ mkBasicTx txBody
 
 spec ::
@@ -64,7 +64,7 @@ spec = describe "UTXO" $ do
           txBody =
             mkBasicTxBody
               & inputsTxBodyL .~ [txInAt 0 txMinted]
-              & mintTxBodyL .~ burnTooMuchMultiAsset
+              & forgingTxBodyL .~ Forging burnTooMuchMultiAsset
       (_, rootTxOut) <- getImpRootTxOut
       let rootTxOutValue = rootTxOut ^. valueTxOutL
       submitFailingTx

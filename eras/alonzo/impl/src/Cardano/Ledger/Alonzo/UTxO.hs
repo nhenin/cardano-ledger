@@ -406,7 +406,7 @@ getMintingScriptsNeeded ::
   AlonzoScriptsNeeded era
 getMintingScriptsNeeded txBody =
   AlonzoScriptsNeeded $
-    zipAsIxItem (txBody ^. mintPoliciesTxBodyF) $
+    zipAsIxItem (txBody ^. forgingPoliciesTxBodyF) $
       \asIxItem@(AsIxItem _ (PolicyID scriptHash)) -> (MintingPurpose asIxItem, scriptHash)
 {-# INLINEABLE getMintingScriptsNeeded #-}
 

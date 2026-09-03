@@ -50,5 +50,5 @@ mkTokenMintingTx sh = do
   addr <- freshKeyAddr_
   pure $
     mkBasicTx mkBasicTxBody
-      & bodyTxL . mintTxBodyL .~ ma
+      & bodyTxL . forgingTxBodyL .~ Forging ma
       & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr (MaryValue mempty ma)]
