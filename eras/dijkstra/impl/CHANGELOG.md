@@ -2,6 +2,13 @@
 
 ## 0.4.0.0
 
+* Introduce the Dijkstra output-split model in `TxOut.ApplicationAssets`,
+  `TxOut.CapacityDeposit`, and `TxOut.Value`: the transitional `OutputValue`
+  contains both allocations and exposes their total ADA through `outputCoins`.
+  `TxOut.Value.Translation.fromMaryValue` maps a historical output's total
+  holdings using a caller-supplied deposit, rejecting negative or underfunded
+  allocations; `toMaryValue` projects total holdings without retaining the split.
+  These types are not yet integrated into `TxOut` storage or protocol rules.
 * Remove re-exported `mintTxBodyL`, `mintedTxBodyF`, and `mintValueTxBodyF`; use the typed forging API from `Cardano.Ledger.Mary.Core`
 * Require `cardano-ledger-mary >=1.12`; public interfaces use the native-asset types from their new Mary modules
 * Re-export the typed forging API from `Cardano.Ledger.Dijkstra.Core`:

@@ -29,6 +29,8 @@ import qualified Test.Cardano.Ledger.Dijkstra.Imp as Imp
 import Test.Cardano.Ledger.Dijkstra.ImpTest ()
 import qualified Test.Cardano.Ledger.Dijkstra.Plutus.PlutusSpec as PlutusSpec
 import qualified Test.Cardano.Ledger.Dijkstra.TxInfoSpec as DijkstraTxInfoSpec
+import qualified Test.Cardano.Ledger.Dijkstra.TxOut.Value.TranslationSpec as OutputValueTranslationSpec
+import qualified Test.Cardano.Ledger.Dijkstra.TxOut.ValueSpec as OutputValueSpec
 import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
 
@@ -38,6 +40,8 @@ instance EraSpec DijkstraEra where
 main :: IO ()
 main =
   ledgerEraTestMain @DijkstraEra $ do
+    OutputValueSpec.spec
+    OutputValueTranslationSpec.spec
     describe "RoundTrip" $ do
       roundTripConwayCommonSpec @DijkstraEra
       prop "Block (Leios.Header)" $

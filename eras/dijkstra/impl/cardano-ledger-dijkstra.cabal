@@ -48,6 +48,10 @@ library
     Cardano.Ledger.Dijkstra.TxCert
     Cardano.Ledger.Dijkstra.TxInfo
     Cardano.Ledger.Dijkstra.TxOut
+    Cardano.Ledger.Dijkstra.TxOut.ApplicationAssets
+    Cardano.Ledger.Dijkstra.TxOut.CapacityDeposit
+    Cardano.Ledger.Dijkstra.TxOut.Value
+    Cardano.Ledger.Dijkstra.TxOut.Value.Translation
     Cardano.Ledger.Dijkstra.TxWits
     Cardano.Ledger.Dijkstra.UTxO
 
@@ -267,6 +271,8 @@ test-suite tests
     Test.Cardano.Ledger.Dijkstra.Binary.CddlSpec
     Test.Cardano.Ledger.Dijkstra.GoldenSpec
     Test.Cardano.Ledger.Dijkstra.Plutus.PlutusSpec
+    Test.Cardano.Ledger.Dijkstra.TxOut.Value.TranslationSpec
+    Test.Cardano.Ledger.Dijkstra.TxOut.ValueSpec
 
   default-language: Haskell2010
   ghc-options:
@@ -291,5 +297,7 @@ test-suite tests
     cardano-ledger-conway:{cardano-ledger-conway, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-dijkstra:{cardano-ledger-dijkstra, cddl, testlib},
+    cardano-ledger-mary,
     cardano-ledger-shelley:testlib,
     cardano-protocol:{cardano-protocol, testlib},
+    containers,
