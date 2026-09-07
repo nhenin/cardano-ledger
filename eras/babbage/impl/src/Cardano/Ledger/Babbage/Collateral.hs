@@ -36,7 +36,7 @@ collAdaBalance ::
 collAdaBalance txBody utxoCollateral = toDeltaCoin $
   case txBody ^. collateralReturnTxBodyL of
     SNothing -> colbal
-    SJust txOut -> colbal <-> (txOut ^. coinTxOutL @era)
+    SJust txOut -> colbal <-> (txOut ^. totalCoinTxOutF @era)
   where
     colbal = sumAllCoin utxoCollateral
 

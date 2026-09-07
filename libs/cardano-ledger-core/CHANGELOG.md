@@ -2,6 +2,9 @@
 
 ## 1.22.0.0
 
+* Add `EraTxOut.totalValueEitherTxOutF` and derived read-only `totalValueTxOutF`, `totalCoinTxOutF`, and `totalCompactCoinTxOutF` for output accounting; the default preserves existing eras
+* Route `sumAllValue`, `sumAllCoin`, `sumUTxO`, and `sumCoinUTxO` through the total projection, independently of mutable value/coin lenses
+* Use the same total projection for `isAdaOnlyTxOutF` and `areAllAdaOnly`, keeping collateral short-circuit checks consistent with full balances
 * Add new helpers with predicate failure injection. List below also shows direct mapping to older helpers without injection:
   - `?!.` -> `?!`
   - `?!#.` -> `?!#`

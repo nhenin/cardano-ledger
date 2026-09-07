@@ -2,6 +2,7 @@
 
 ## 1.15.0.0
 
+* Use read-only output totals for collateral return accounting and diagnostics, preserving existing era behavior
 * Remove re-exported `mintTxBodyL`, `mintedTxBodyF`, and `mintValueTxBodyF`; use the typed forging API from `Cardano.Ledger.Mary.Core`
 * Require `cardano-ledger-mary >=1.12`; public interfaces use the native-asset types from their new Mary modules
 * Re-export the typed forging API from `Cardano.Ledger.Babbage.Core`:

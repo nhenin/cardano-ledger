@@ -36,6 +36,9 @@ module Cardano.Ledger.Core (
   bootAddrTxOutF,
   coinTxOutL,
   compactCoinTxOutL,
+  totalValueTxOutF,
+  totalCoinTxOutF,
+  totalCompactCoinTxOutF,
   isAdaOnlyTxOutF,
   EraTxBody (..),
   txIdTxBody,
@@ -331,6 +334,8 @@ class
   -- | Every era, except Shelley, must be able to upgrade a `TxOut` from a previous era.
   upgradeTxOut :: EraTxOut (PreviousEra era) => TxOut (PreviousEra era) -> TxOut era
 
+  -- | Lens for the era's editable value field. Use 'totalValueTxOutF' for
+  -- balance calculations, which may also account for assets held in other fields.
   valueTxOutL :: Lens' (TxOut era) (Value era)
   valueTxOutL =
     lens
@@ -351,9 +356,28 @@ class
       (\txOut cValue -> txOut & valueEitherTxOutL .~ Right cValue)
   {-# INLINE compactValueTxOutL #-}
 
-  -- | Lens for getting and setting in TxOut either an address or its compact
+  -- | Lens for getting and setting in TxOut either a value or its compact
   -- version by doing the least amount of work.
   valueEitherTxOutL :: Lens' (TxOut era) (Either (Value era) (CompactForm (Value era)))
+
+  -- | Read-only projection of all assets accounted for in an output, using
+  -- whichever representation avoids unnecessary compaction or expansion.
+  --
+  -- Eras that store the entire balance in the editable value field can use the
+  -- default. An era with separate allocations, such as a capacity deposit and
+  -- application assets, must include both in this projection. All total getters
+  -- derive from this one method, so their ADA and native-asset totals agree.
+  -- The total ADA of a validated output must fit in a 'CompactForm' 'Coin'.
+  --
+  -- This is a compatibility boundary for the existing 'Value'-based balance
+  -- API. The projection does not replace the types of the separate allocations.
+  --
+  -- This projection supplies no allocation policy for a setter. It also does
+  -- not determine how much ADA is releasable, contributes to stake, or is exposed
+  -- to a script; those are separate contracts.
+  totalValueEitherTxOutF :: SimpleGetter (TxOut era) (Either (Value era) (CompactForm (Value era)))
+  totalValueEitherTxOutF = valueEitherTxOutL
+  {-# INLINE totalValueEitherTxOutF #-}
 
   addrTxOutL :: Lens' (TxOut era) Addr
   addrTxOutL =
@@ -413,6 +437,8 @@ bootAddrTxOutF = to $ \txOut ->
     _ -> Nothing
 {-# INLINE bootAddrTxOutF #-}
 
+-- | Lens for the ADA in the editable value field. Use 'totalCoinTxOutF' for
+-- balance calculations that include every allocation in an output.
 coinTxOutL :: (HasCallStack, EraTxOut era) => Lens' (TxOut era) Coin
 coinTxOutL =
   lens
@@ -445,11 +471,39 @@ compactCoinTxOutL =
     )
 {-# INLINE compactCoinTxOutL #-}
 
+-- | Total ADA and native assets accounted for in an output.
+totalValueTxOutF :: EraTxOut era => SimpleGetter (TxOut era) (Value era)
+totalValueTxOutF = to $ \txOut ->
+  case txOut ^. totalValueEitherTxOutF of
+    Left value -> value
+    Right cValue -> fromCompact cValue
+{-# INLINE totalValueTxOutF #-}
+
+-- | Total ADA accounted for in an output. For compact values, this avoids
+-- expanding the native assets.
+totalCoinTxOutF :: EraTxOut era => SimpleGetter (TxOut era) Coin
+totalCoinTxOutF = to $ \txOut ->
+  case txOut ^. totalValueEitherTxOutF of
+    Left value -> coin value
+    Right cValue -> fromCompact (coinCompact cValue)
+{-# INLINE totalCoinTxOutF #-}
+
+-- | Compact total ADA accounted for in an output, without expanding compact
+-- native assets. Like 'compactCoinTxOutL', this is partial on unvalidated outputs
+-- whose ADA cannot be compacted.
+totalCompactCoinTxOutF ::
+  (HasCallStack, EraTxOut era) => SimpleGetter (TxOut era) (CompactForm Coin)
+totalCompactCoinTxOutF = to $ \txOut ->
+  case txOut ^. totalValueEitherTxOutF of
+    Left value -> toCompactPartial (coin value)
+    Right cValue -> coinCompact cValue
+{-# INLINE totalCompactCoinTxOutF #-}
+
 -- | This is a getter that implements an efficient way to check whether 'TxOut'
 -- contains ADA only.
 isAdaOnlyTxOutF :: EraTxOut era => SimpleGetter (TxOut era) Bool
 isAdaOnlyTxOutF = to $ \txOut ->
-  case txOut ^. valueEitherTxOutL of
+  case txOut ^. totalValueEitherTxOutF of
     Left val -> isAdaOnly val
     Right cVal -> isAdaOnlyCompact cVal
 
