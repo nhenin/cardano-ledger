@@ -2,6 +2,9 @@
 
 ## 0.4.0.0
 
+* Document the additional capacity-deposit management exposed by a change to
+  `coinsPerUTxOByte`, distinguishing historical allocation, current requirement
+  and release accounting without selecting a repricing policy.
 * Introduce the Dijkstra output-split model in `TxOut.ApplicationAssets`,
   `TxOut.CapacityDeposit`, and `TxOut.Value`: the transitional `OutputValue`
   contains both allocations and exposes their total ADA through `outputCoins`.
