@@ -46,9 +46,9 @@ module Cardano.Ledger.Api.Tx.Out (
   coinTxOutL,
   isAdaOnlyTxOutF,
 
-  -- ** Accounting totals
-  totalValueTxOutF,
-  totalCoinTxOutF,
+  -- ** Output pot projections
+  outputPotValueTxOutF,
+  outputPotCoinsTxOutF,
 
   -- ** Address
   addrTxOutL,
@@ -94,8 +94,8 @@ import Cardano.Ledger.Core (
   bootAddrTxOutF,
   coinTxOutL,
   isAdaOnlyTxOutF,
-  totalCoinTxOutF,
-  totalValueTxOutF,
+  outputPotCoinsTxOutF,
+  outputPotValueTxOutF,
  )
 import Cardano.Ledger.Tools (ensureMinCoinTxOut, setMinCoinTxOut)
 import Lens.Micro

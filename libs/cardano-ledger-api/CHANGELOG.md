@@ -2,7 +2,7 @@
 
 ## 1.15.0.0
 
-* Expose read-only `totalValueTxOutF` and `totalCoinTxOutF` separately from mutable output value/coin lenses; require `cardano-ledger-core >=1.22`
+* Expose read-only `outputPotValueTxOutF` and `outputPotCoinsTxOutF` for the `OutputPotValue` / `OutputPotCoins` accounting projections, separately from mutable output value/coin lenses; require `cardano-ledger-core >=1.22`
 * Remove `mintTxBodyL`, `mintedTxBodyF`, and `mintValueTxBodyF` from `Cardano.Ledger.Api.Tx.Body`; use the typed forging API
 * Rename `AnyEraTxBody.mintTxBodyG` to `forgingTxBodyG` and change its result from `Maybe MultiAsset` to `Maybe Forging`; it remains `Nothing` before Mary and `Just` for supported eras, including empty declarations
 * Require `cardano-ledger-mary >=1.12`; public interfaces use the native-asset types from their new Mary modules

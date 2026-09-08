@@ -36,9 +36,9 @@ module Cardano.Ledger.Core (
   bootAddrTxOutF,
   coinTxOutL,
   compactCoinTxOutL,
-  totalValueTxOutF,
-  totalCoinTxOutF,
-  totalCompactCoinTxOutF,
+  outputPotValueTxOutF,
+  outputPotCoinsTxOutF,
+  compactOutputPotCoinsTxOutF,
   isAdaOnlyTxOutF,
   EraTxBody (..),
   txIdTxBody,
@@ -334,7 +334,7 @@ class
   -- | Every era, except Shelley, must be able to upgrade a `TxOut` from a previous era.
   upgradeTxOut :: EraTxOut (PreviousEra era) => TxOut (PreviousEra era) -> TxOut era
 
-  -- | Lens for the era's editable value field. Use 'totalValueTxOutF' for
+  -- | Lens for the era's editable value field. Use 'outputPotValueTxOutF' for
   -- balance calculations, which may also account for assets held in other fields.
   valueTxOutL :: Lens' (TxOut era) (Value era)
   valueTxOutL =
@@ -360,24 +360,27 @@ class
   -- version by doing the least amount of work.
   valueEitherTxOutL :: Lens' (TxOut era) (Either (Value era) (CompactForm (Value era)))
 
-  -- | Read-only projection of all assets accounted for in an output, using
-  -- whichever representation avoids unnecessary compaction or expansion.
+  -- | Read-only @OutputPotValue@ projection: all assets accounted for in one
+  -- output, using whichever representation avoids unnecessary compaction or expansion.
   --
   -- Eras that store the entire balance in the editable value field can use the
   -- default. An era with separate allocations, such as a capacity deposit and
-  -- application assets, must include both in this projection. All total getters
-  -- derive from this one method, so their ADA and native-asset totals agree.
+  -- application assets, must include both in this projection. All output-pot
+  -- getters derive from this one method, so their ADA and native-asset totals agree.
   -- The total ADA of a validated output must fit in a 'CompactForm' 'Coin'.
   --
   -- This is a compatibility boundary for the existing 'Value'-based balance
-  -- API. The projection does not replace the types of the separate allocations.
+  -- API. @OutputPotValue@ names the flattened accounting view; it does not retain
+  -- the allocation between capacity deposit and application assets, or replace
+  -- their types. Its ADA-only projection is @OutputPotCoins@.
   --
   -- This projection supplies no allocation policy for a setter. It also does
   -- not determine how much ADA is releasable, contributes to stake, or is exposed
   -- to a script; those are separate contracts.
-  totalValueEitherTxOutF :: SimpleGetter (TxOut era) (Either (Value era) (CompactForm (Value era)))
-  totalValueEitherTxOutF = valueEitherTxOutL
-  {-# INLINE totalValueEitherTxOutF #-}
+  outputPotValueEitherTxOutF ::
+    SimpleGetter (TxOut era) (Either (Value era) (CompactForm (Value era)))
+  outputPotValueEitherTxOutF = valueEitherTxOutL
+  {-# INLINE outputPotValueEitherTxOutF #-}
 
   addrTxOutL :: Lens' (TxOut era) Addr
   addrTxOutL =
@@ -437,7 +440,7 @@ bootAddrTxOutF = to $ \txOut ->
     _ -> Nothing
 {-# INLINE bootAddrTxOutF #-}
 
--- | Lens for the ADA in the editable value field. Use 'totalCoinTxOutF' for
+-- | Lens for the ADA in the editable value field. Use 'outputPotCoinsTxOutF' for
 -- balance calculations that include every allocation in an output.
 coinTxOutL :: (HasCallStack, EraTxOut era) => Lens' (TxOut era) Coin
 coinTxOutL =
@@ -471,39 +474,40 @@ compactCoinTxOutL =
     )
 {-# INLINE compactCoinTxOutL #-}
 
--- | Total ADA and native assets accounted for in an output.
-totalValueTxOutF :: EraTxOut era => SimpleGetter (TxOut era) (Value era)
-totalValueTxOutF = to $ \txOut ->
-  case txOut ^. totalValueEitherTxOutF of
+-- | Read @OutputPotValue@: total ADA and native assets accounted for in one output.
+outputPotValueTxOutF :: EraTxOut era => SimpleGetter (TxOut era) (Value era)
+outputPotValueTxOutF = to $ \txOut ->
+  case txOut ^. outputPotValueEitherTxOutF of
     Left value -> value
     Right cValue -> fromCompact cValue
-{-# INLINE totalValueTxOutF #-}
+{-# INLINE outputPotValueTxOutF #-}
 
--- | Total ADA accounted for in an output. For compact values, this avoids
+-- | Read @OutputPotCoins@: total ADA accounted for in one output, including
+-- any capacity deposit and application ADA. For compact values, this avoids
 -- expanding the native assets.
-totalCoinTxOutF :: EraTxOut era => SimpleGetter (TxOut era) Coin
-totalCoinTxOutF = to $ \txOut ->
-  case txOut ^. totalValueEitherTxOutF of
+outputPotCoinsTxOutF :: EraTxOut era => SimpleGetter (TxOut era) Coin
+outputPotCoinsTxOutF = to $ \txOut ->
+  case txOut ^. outputPotValueEitherTxOutF of
     Left value -> coin value
     Right cValue -> fromCompact (coinCompact cValue)
-{-# INLINE totalCoinTxOutF #-}
+{-# INLINE outputPotCoinsTxOutF #-}
 
--- | Compact total ADA accounted for in an output, without expanding compact
+-- | Read compact @OutputPotCoins@, without expanding compact
 -- native assets. Like 'compactCoinTxOutL', this is partial on unvalidated outputs
 -- whose ADA cannot be compacted.
-totalCompactCoinTxOutF ::
+compactOutputPotCoinsTxOutF ::
   (HasCallStack, EraTxOut era) => SimpleGetter (TxOut era) (CompactForm Coin)
-totalCompactCoinTxOutF = to $ \txOut ->
-  case txOut ^. totalValueEitherTxOutF of
+compactOutputPotCoinsTxOutF = to $ \txOut ->
+  case txOut ^. outputPotValueEitherTxOutF of
     Left value -> toCompactPartial (coin value)
     Right cValue -> coinCompact cValue
-{-# INLINE totalCompactCoinTxOutF #-}
+{-# INLINE compactOutputPotCoinsTxOutF #-}
 
 -- | This is a getter that implements an efficient way to check whether 'TxOut'
 -- contains ADA only.
 isAdaOnlyTxOutF :: EraTxOut era => SimpleGetter (TxOut era) Bool
 isAdaOnlyTxOutF = to $ \txOut ->
-  case txOut ^. totalValueEitherTxOutF of
+  case txOut ^. outputPotValueEitherTxOutF of
     Left val -> isAdaOnly val
     Right cVal -> isAdaOnlyCompact cVal
 

@@ -19,7 +19,7 @@ import Data.Default (Default (def))
 import Data.Functor.Identity
 import Data.Word (Word64)
 import Lens.Micro
-import qualified Test.Cardano.Ledger.Api.Tx.Out.TotalsSpec as Totals
+import qualified Test.Cardano.Ledger.Api.Tx.Out.OutputPot.Spec as OutputPot
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
 
@@ -166,38 +166,38 @@ spec :: Spec
 spec =
   describe "TxOut" $ do
     describe "ShelleyEra" $ do
-      Totals.currentOutputTotalsSpec @ShelleyEra
+      OutputPot.currentSpec @ShelleyEra
       propSetShelleyMinTxOut @ShelleyEra
       propSetEnsureMinTxOut @ShelleyEra
     describe "AllegraEra" $ do
-      Totals.currentOutputTotalsSpec @AllegraEra
+      OutputPot.currentSpec @AllegraEra
       propSetShelleyMinTxOut @AllegraEra
       propSetEnsureMinTxOut @AllegraEra
     describe "MaryEra" $ do
-      Totals.currentOutputTotalsSpec @MaryEra
-      Totals.mixedAssetTotalsSpec @MaryEra
+      OutputPot.currentSpec @MaryEra
+      OutputPot.mixedAssetsSpec @MaryEra
       propSetShelleyMinTxOut @MaryEra
       propSetMaryEnsureMinTxOut
     describe "AlonzoEra" $ do
-      Totals.currentOutputTotalsSpec @AlonzoEra
-      Totals.mixedAssetTotalsSpec @AlonzoEra
+      OutputPot.currentSpec @AlonzoEra
+      OutputPot.mixedAssetsSpec @AlonzoEra
       propSetAlonzoMinTxOut
       propSetEnsureMinTxOut @AlonzoEra
     describe "BabbageEra" $ do
-      Totals.currentOutputTotalsSpec @BabbageEra
-      Totals.mixedAssetTotalsSpec @BabbageEra
-      Totals.collateralReturnTotalsSpec @BabbageEra
+      OutputPot.currentSpec @BabbageEra
+      OutputPot.mixedAssetsSpec @BabbageEra
+      OutputPot.collateralReturnSpec @BabbageEra
       propSetBabbageMinTxOut @BabbageEra
       propSetBabbageEnsureMinTxOut @BabbageEra
     describe "ConwayEra" $ do
-      Totals.currentOutputTotalsSpec @ConwayEra
-      Totals.mixedAssetTotalsSpec @ConwayEra
-      Totals.collateralReturnTotalsSpec @ConwayEra
+      OutputPot.currentSpec @ConwayEra
+      OutputPot.mixedAssetsSpec @ConwayEra
+      OutputPot.collateralReturnSpec @ConwayEra
       propSetBabbageMinTxOut @ConwayEra
       propSetBabbageEnsureMinTxOut @ConwayEra
     describe "DijkstraEra" $ do
-      Totals.currentOutputTotalsSpec @DijkstraEra
-      Totals.mixedAssetTotalsSpec @DijkstraEra
-      Totals.collateralReturnTotalsSpec @DijkstraEra
+      OutputPot.currentSpec @DijkstraEra
+      OutputPot.mixedAssetsSpec @DijkstraEra
+      OutputPot.collateralReturnSpec @DijkstraEra
       propSetBabbageMinTxOut @DijkstraEra
       propSetBabbageEnsureMinTxOut @DijkstraEra

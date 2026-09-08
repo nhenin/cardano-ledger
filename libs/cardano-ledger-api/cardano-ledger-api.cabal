@@ -133,7 +133,8 @@ test-suite cardano-ledger-api-test
     Test.Cardano.Ledger.Api.Tx
     Test.Cardano.Ledger.Api.Tx.Body
     Test.Cardano.Ledger.Api.Tx.Out
-    Test.Cardano.Ledger.Api.Tx.Out.TotalsSpec
+    Test.Cardano.Ledger.Api.Tx.Out.OutputPot.Fixture
+    Test.Cardano.Ledger.Api.Tx.Out.OutputPot.Spec
 
   default-language: Haskell2010
   ghc-options:
