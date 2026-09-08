@@ -36,9 +36,9 @@ module Cardano.Ledger.Core (
   bootAddrTxOutF,
   coinTxOutL,
   compactCoinTxOutL,
-  outputPotValueTxOutF,
-  outputPotCoinsTxOutF,
-  compactOutputPotCoinsTxOutF,
+  potValueTxOutF,
+  potCoinsTxOutF,
+  compactPotCoinsTxOutF,
   isAdaOnlyTxOutF,
   EraTxBody (..),
   txIdTxBody,
@@ -334,7 +334,7 @@ class
   -- | Every era, except Shelley, must be able to upgrade a `TxOut` from a previous era.
   upgradeTxOut :: EraTxOut (PreviousEra era) => TxOut (PreviousEra era) -> TxOut era
 
-  -- | Lens for the era's editable value field. Use 'outputPotValueTxOutF' for
+  -- | Lens for the era's editable value field. Use 'potValueTxOutF' for
   -- balance calculations, which may also account for assets held in other fields.
   valueTxOutL :: Lens' (TxOut era) (Value era)
   valueTxOutL =
@@ -377,10 +377,10 @@ class
   -- This projection supplies no allocation policy for a setter. It also does
   -- not determine how much ADA is releasable, contributes to stake, or is exposed
   -- to a script; those are separate contracts.
-  outputPotValueEitherTxOutF ::
+  potValueEitherTxOutF ::
     SimpleGetter (TxOut era) (Either (Value era) (CompactForm (Value era)))
-  outputPotValueEitherTxOutF = valueEitherTxOutL
-  {-# INLINE outputPotValueEitherTxOutF #-}
+  potValueEitherTxOutF = valueEitherTxOutL
+  {-# INLINE potValueEitherTxOutF #-}
 
   addrTxOutL :: Lens' (TxOut era) Addr
   addrTxOutL =
@@ -440,7 +440,7 @@ bootAddrTxOutF = to $ \txOut ->
     _ -> Nothing
 {-# INLINE bootAddrTxOutF #-}
 
--- | Lens for the ADA in the editable value field. Use 'outputPotCoinsTxOutF' for
+-- | Lens for the ADA in the editable value field. Use 'potCoinsTxOutF' for
 -- balance calculations that include every allocation in an output.
 coinTxOutL :: (HasCallStack, EraTxOut era) => Lens' (TxOut era) Coin
 coinTxOutL =
@@ -474,40 +474,41 @@ compactCoinTxOutL =
     )
 {-# INLINE compactCoinTxOutL #-}
 
--- | Read @OutputPotValue@: total ADA and native assets accounted for in one output.
-outputPotValueTxOutF :: EraTxOut era => SimpleGetter (TxOut era) (Value era)
-outputPotValueTxOutF = to $ \txOut ->
-  case txOut ^. outputPotValueEitherTxOutF of
+-- | Read @OutputPotValue@: total ADA and native assets accounted for in one output,
+-- including any @CapacityDeposit@ and all @ApplicationAssets@.
+potValueTxOutF :: EraTxOut era => SimpleGetter (TxOut era) (Value era)
+potValueTxOutF = to $ \txOut ->
+  case txOut ^. potValueEitherTxOutF of
     Left value -> value
     Right cValue -> fromCompact cValue
-{-# INLINE outputPotValueTxOutF #-}
+{-# INLINE potValueTxOutF #-}
 
 -- | Read @OutputPotCoins@: total ADA accounted for in one output, including
--- any capacity deposit and application ADA. For compact values, this avoids
--- expanding the native assets.
-outputPotCoinsTxOutF :: EraTxOut era => SimpleGetter (TxOut era) Coin
-outputPotCoinsTxOutF = to $ \txOut ->
-  case txOut ^. outputPotValueEitherTxOutF of
+-- any @CapacityDeposit@ plus the ADA held in @ApplicationAssets@. For compact
+-- values, this avoids expanding the native assets.
+potCoinsTxOutF :: EraTxOut era => SimpleGetter (TxOut era) Coin
+potCoinsTxOutF = to $ \txOut ->
+  case txOut ^. potValueEitherTxOutF of
     Left value -> coin value
     Right cValue -> fromCompact (coinCompact cValue)
-{-# INLINE outputPotCoinsTxOutF #-}
+{-# INLINE potCoinsTxOutF #-}
 
 -- | Read compact @OutputPotCoins@, without expanding compact
 -- native assets. Like 'compactCoinTxOutL', this is partial on unvalidated outputs
 -- whose ADA cannot be compacted.
-compactOutputPotCoinsTxOutF ::
+compactPotCoinsTxOutF ::
   (HasCallStack, EraTxOut era) => SimpleGetter (TxOut era) (CompactForm Coin)
-compactOutputPotCoinsTxOutF = to $ \txOut ->
-  case txOut ^. outputPotValueEitherTxOutF of
+compactPotCoinsTxOutF = to $ \txOut ->
+  case txOut ^. potValueEitherTxOutF of
     Left value -> toCompactPartial (coin value)
     Right cValue -> coinCompact cValue
-{-# INLINE compactOutputPotCoinsTxOutF #-}
+{-# INLINE compactPotCoinsTxOutF #-}
 
 -- | This is a getter that implements an efficient way to check whether 'TxOut'
 -- contains ADA only.
 isAdaOnlyTxOutF :: EraTxOut era => SimpleGetter (TxOut era) Bool
 isAdaOnlyTxOutF = to $ \txOut ->
-  case txOut ^. outputPotValueEitherTxOutF of
+  case txOut ^. potValueEitherTxOutF of
     Left val -> isAdaOnly val
     Right cVal -> isAdaOnlyCompact cVal
 

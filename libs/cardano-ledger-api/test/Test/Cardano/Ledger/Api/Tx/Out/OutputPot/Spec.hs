@@ -11,9 +11,9 @@ module Test.Cardano.Ledger.Api.Tx.Out.OutputPot.Spec (
   collateralReturnSpec,
 ) where
 
-import Cardano.Ledger.Api.Tx.Out (outputPotCoinsTxOutF, outputPotValueTxOutF)
+import Cardano.Ledger.Api.Tx.Out (potCoinsTxOutF, potValueTxOutF)
 import Cardano.Ledger.Babbage.Collateral (collAdaBalance)
-import Cardano.Ledger.Babbage.Core hiding (outputPotCoinsTxOutF, outputPotValueTxOutF)
+import Cardano.Ledger.Babbage.Core hiding (potCoinsTxOutF, potValueTxOutF)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.State (sumAllCoin, sumAllValue, sumCoinUTxO, sumUTxO)
@@ -27,17 +27,17 @@ import Test.Cardano.Ledger.Common
 currentSpec :: forall era. (EraTxOut era, Arbitrary (TxOut era)) => Spec
 currentSpec = describe "Current unsplit OutputPot projections" $ do
   prop "preserve the editable value representation" $
-    forAll (Fixture.currentOutput @era) outputPotRepresentationMatchesHoldings
+    forAll (Fixture.currentOutput @era) potRepresentationMatchesHoldings
   prop "preserve the editable value" $
-    forAll (Fixture.currentOutput @era) outputPotValueMatchesHoldings
+    forAll (Fixture.currentOutput @era) potValueMatchesHoldings
   prop "preserve the editable ADA amount" $
-    forAll (Fixture.currentOutput @era) outputPotCoinsMatchHoldings
+    forAll (Fixture.currentOutput @era) potCoinsMatchHoldings
   prop "preserve the editable compact ADA amount" $
-    forAll (Fixture.currentOutput @era) compactOutputPotCoinsMatchHoldings
+    forAll (Fixture.currentOutput @era) compactPotCoinsMatchHoldings
   prop "project the ADA amount from the OutputPot value" $
-    forAll (Fixture.currentOutput @era) outputPotCoinsAgreeWithValue
+    forAll (Fixture.currentOutput @era) potCoinsAgreeWithValue
   prop "classify ADA-only outputs from the OutputPot value" $
-    forAll (Fixture.currentOutput @era) adaOnlyClassificationAgreesWithOutputPotValue
+    forAll (Fixture.currentOutput @era) adaOnlyClassificationAgreesWithPotValue
 
   describe "After replacing holdings through the plain setter route" $
     holdingsReplacementSpec (Fixture.outputWithPlainHoldingsReplacement @era)
@@ -67,11 +67,11 @@ currentSpec = describe "Current unsplit OutputPot projections" $ do
 holdingsReplacementSpec :: EraTxOut era => Gen (Fixture.HoldingsReplacement era) -> Spec
 holdingsReplacementSpec replacements = do
   prop "project the replacement value" $
-    forAll replacements outputPotValueMatchesReplacement
+    forAll replacements potValueMatchesReplacement
   prop "project the replacement ADA amount" $
-    forAll replacements outputPotCoinsMatchReplacement
+    forAll replacements potCoinsMatchReplacement
   prop "project the replacement compact ADA amount" $
-    forAll replacements compactOutputPotCoinsMatchReplacement
+    forAll replacements compactPotCoinsMatchReplacement
 
 mixedAssetsSpec :: forall era. (EraTxOut era, Value era ~ MaryValue) => Spec
 mixedAssetsSpec = describe "Outputs with ADA and shared native assets" $ do
@@ -91,88 +91,88 @@ collateralReturnSpec = describe "Collateral ADA balance" $ do
   it "subtracts a nonzero return once from all collateral input ADA" $
     collateralBalanceMatchesRemainingCoins (Fixture.collateralWithNonzeroReturn @era)
 
-outputPotRepresentationMatchesHoldings :: EraTxOut era => TxOut era -> Expectation
-outputPotRepresentationMatchesHoldings txOut = do
+potRepresentationMatchesHoldings :: EraTxOut era => TxOut era -> Expectation
+potRepresentationMatchesHoldings txOut = do
   -- Setup
   let expected = txOut ^. valueEitherTxOutL
   -- Exercise
-  let actual = txOut ^. outputPotValueEitherTxOutF
+  let actual = txOut ^. potValueEitherTxOutF
   -- Verify
   actual `shouldBe` expected
 
-outputPotValueMatchesHoldings :: EraTxOut era => TxOut era -> Expectation
-outputPotValueMatchesHoldings txOut = do
+potValueMatchesHoldings :: EraTxOut era => TxOut era -> Expectation
+potValueMatchesHoldings txOut = do
   -- Setup
   let expected = txOut ^. valueTxOutL
   -- Exercise
-  let actual = txOut ^. outputPotValueTxOutF
+  let actual = txOut ^. potValueTxOutF
   -- Verify
   actual `shouldBe` expected
 
-outputPotCoinsMatchHoldings :: EraTxOut era => TxOut era -> Expectation
-outputPotCoinsMatchHoldings txOut = do
+potCoinsMatchHoldings :: EraTxOut era => TxOut era -> Expectation
+potCoinsMatchHoldings txOut = do
   -- Setup
   let expected = txOut ^. coinTxOutL
   -- Exercise
-  let actual = txOut ^. outputPotCoinsTxOutF
+  let actual = txOut ^. potCoinsTxOutF
   -- Verify
   actual `shouldBe` expected
 
-compactOutputPotCoinsMatchHoldings :: EraTxOut era => TxOut era -> Expectation
-compactOutputPotCoinsMatchHoldings txOut = do
+compactPotCoinsMatchHoldings :: EraTxOut era => TxOut era -> Expectation
+compactPotCoinsMatchHoldings txOut = do
   -- Setup
   let expected = txOut ^. compactCoinTxOutL
   -- Exercise
-  let actual = txOut ^. compactOutputPotCoinsTxOutF
+  let actual = txOut ^. compactPotCoinsTxOutF
   -- Verify
   actual `shouldBe` expected
 
-outputPotCoinsAgreeWithValue :: EraTxOut era => TxOut era -> Expectation
-outputPotCoinsAgreeWithValue txOut = do
+potCoinsAgreeWithValue :: EraTxOut era => TxOut era -> Expectation
+potCoinsAgreeWithValue txOut = do
   -- Setup
-  let expected = Val.coin (txOut ^. outputPotValueTxOutF)
+  let expected = Val.coin (txOut ^. potValueTxOutF)
   -- Exercise
-  let actual = txOut ^. outputPotCoinsTxOutF
+  let actual = txOut ^. potCoinsTxOutF
   -- Verify
   actual `shouldBe` expected
 
-adaOnlyClassificationAgreesWithOutputPotValue :: EraTxOut era => TxOut era -> Expectation
-adaOnlyClassificationAgreesWithOutputPotValue txOut = do
+adaOnlyClassificationAgreesWithPotValue :: EraTxOut era => TxOut era -> Expectation
+adaOnlyClassificationAgreesWithPotValue txOut = do
   -- Setup
-  let expected = Val.isAdaOnly (txOut ^. outputPotValueTxOutF)
+  let expected = Val.isAdaOnly (txOut ^. potValueTxOutF)
   -- Exercise
   let actual = txOut ^. isAdaOnlyTxOutF
   -- Verify
   actual `shouldBe` expected
 
-outputPotValueMatchesReplacement :: EraTxOut era => Fixture.HoldingsReplacement era -> Expectation
-outputPotValueMatchesReplacement replacement = do
+potValueMatchesReplacement :: EraTxOut era => Fixture.HoldingsReplacement era -> Expectation
+potValueMatchesReplacement replacement = do
   -- Setup
   let txOut = Fixture.replacedOutput replacement
       expected = Fixture.replacementValue replacement
   -- Exercise
-  let actual = txOut ^. outputPotValueTxOutF
+  let actual = txOut ^. potValueTxOutF
   -- Verify
   actual `shouldBe` expected
 
-outputPotCoinsMatchReplacement :: EraTxOut era => Fixture.HoldingsReplacement era -> Expectation
-outputPotCoinsMatchReplacement replacement = do
+potCoinsMatchReplacement :: EraTxOut era => Fixture.HoldingsReplacement era -> Expectation
+potCoinsMatchReplacement replacement = do
   -- Setup
   let txOut = Fixture.replacedOutput replacement
       expected = Val.coin (Fixture.replacementValue replacement)
   -- Exercise
-  let actual = txOut ^. outputPotCoinsTxOutF
+  let actual = txOut ^. potCoinsTxOutF
   -- Verify
   actual `shouldBe` expected
 
-compactOutputPotCoinsMatchReplacement ::
+compactPotCoinsMatchReplacement ::
   EraTxOut era => Fixture.HoldingsReplacement era -> Expectation
-compactOutputPotCoinsMatchReplacement replacement = do
+compactPotCoinsMatchReplacement replacement = do
   -- Setup
   let txOut = Fixture.replacedOutput replacement
       expected = Val.coin (Fixture.replacementValue replacement)
   -- Exercise
-  let actual = fromCompact (txOut ^. compactOutputPotCoinsTxOutF)
+  let actual = fromCompact (txOut ^. compactPotCoinsTxOutF)
   -- Verify
   actual `shouldBe` expected
 

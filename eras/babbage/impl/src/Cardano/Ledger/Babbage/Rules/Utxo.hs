@@ -295,7 +295,7 @@ validateCollateralContainsNonADA txBody utxoCollateral =
         SNothing -> collateralBalance
         SJust retTxOut ->
           if utxoCollateralHasOnlyAda
-            then retTxOut ^. outputPotValueTxOutF
+            then retTxOut ^. potValueTxOutF
             else collateralBalance
     -- This is the balance that is provided by the collateral inputs
     collateralBalance = sumAllValue utxoCollateral
@@ -304,7 +304,7 @@ validateCollateralContainsNonADA txBody utxoCollateral =
     -- them to the return TxOut.
     totalCollateralBalance = case txBody ^. collateralReturnTxBodyL of
       SNothing -> collateralBalance
-      SJust retTxOut -> collateralBalance <-> (retTxOut ^. outputPotValueTxOutF @era)
+      SJust retTxOut -> collateralBalance <-> (retTxOut ^. potValueTxOutF @era)
 
 -- > (txcoll tx ≠ ◇) => balance == txcoll tx
 validateCollateralEqBalance ::
