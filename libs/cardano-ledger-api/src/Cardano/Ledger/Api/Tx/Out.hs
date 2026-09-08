@@ -46,6 +46,11 @@ module Cardano.Ledger.Api.Tx.Out (
   coinTxOutL,
   isAdaOnlyTxOutF,
 
+  -- ** Total output holdings
+  potValueTxOutF,
+  potCoinsTxOutF,
+  compactPotCoinsTxOutF,
+
   -- ** Address
   addrTxOutL,
   bootAddrTxOutF,
@@ -147,6 +152,8 @@ setMinCoinSizedTxOutInternal f pp = go
 
 -- | This function will adjust the output's `Coin` value to the smallest amount
 -- allowed by the UTXO rule. Initial amount is not important.
+-- In eras with a separate capacity deposit, this adjusts application coins
+-- only. A change in output size may require updating the deposit separately.
 setMinCoinSizedTxOut ::
   forall era.
   EraTxOut era =>

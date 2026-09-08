@@ -48,6 +48,7 @@ import Cardano.Ledger.Core (
   mkBasicTxOut,
   mkCoinTxOut,
   outputsTxBodyL,
+  potCoinsTxOutF,
  )
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Plutus (
@@ -164,8 +165,12 @@ spec = describe "UTXOS" $ do
     let txIn = txInAt 0 tx
     addr <- freshKeyAddrNoPtr_
     coll <- sendCoinTo addr $ Coin 5_000_000
+    collateralOutput <- impGetUTxO coll
     let
       collReturn = mkBasicTxOut addr . inject $ Coin 2_000_000
+      collateralDelta =
+        DeltaCoin $
+          unCoin (collateralOutput ^. potCoinsTxOutF) - unCoin (collReturn ^. potCoinsTxOutF)
       tx2 =
         mkBasicTx $
           mkBasicTxBody
@@ -175,4 +180,4 @@ spec = describe "UTXOS" $ do
             & totalCollateralTxBodyL .~ pure (Coin 1_000_000)
     submitFailingTx
       tx2
-      [injectFailure (IncorrectTotalCollateralField (DeltaCoin 3_000_000) (Coin 1_000_000))]
+      [injectFailure (IncorrectTotalCollateralField collateralDelta (Coin 1_000_000))]

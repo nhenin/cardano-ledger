@@ -60,6 +60,8 @@ import Control.State.Transition (STS (..))
 import Data.Functor.Identity (Identity)
 import qualified Data.TreeDiff.OMap as OMap
 import Test.Cardano.Ledger.Conway.TreeDiff (Expr (..), ToExpr)
+import Test.Cardano.Ledger.Dijkstra.TxOut ()
+import Test.Cardano.Ledger.Dijkstra.TxOut.Translation ()
 import Test.Cardano.Ledger.TreeDiff (HexBytes (..), ToExpr (..))
 
 instance

@@ -9,8 +9,8 @@
 module Test.Cardano.Ledger.Dijkstra.TxInfoSpec (spec) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (
-  EraPlutusContext (..),
-  EraPlutusTxInfo (..),
+  ContextError,
+  EraPlutusTxInfo,
   LedgerTxInfo (..),
   PlutusTxInfoResult (..),
   SupportedLanguage (..),
@@ -51,13 +51,13 @@ import qualified Data.Map.NonEmpty as NEM
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import qualified Data.OSet.Strict as OSet
-import Data.Proxy (Proxy (..))
 import qualified Data.Set.NonEmpty as NES
 import Lens.Micro ((&), (.~))
 import qualified PlutusLedgerApi.V4 as PV4
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Utils (testGlobals)
 import Test.Cardano.Ledger.Dijkstra.Arbitrary ()
+import Test.Cardano.Ledger.Dijkstra.TxInfo.Fixture (metadataTxInfo)
 import qualified Test.Cardano.Ledger.Plutus.Examples as Plutus
 
 spec ::
@@ -105,7 +105,7 @@ spec = describe "TxInfo" $ do
             , ltiMemoizedSubTransactions = mempty
             }
       pure $
-        (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
+        (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (metadataTxInfo SPlutusV4 ledgerTxInfo))
           `shouldBeLeft` inject (PointerPresentInOutput @era (NES.singleton . TxOutFromOutput $ TxIx 0))
     prop "Collects all Ptr sources when multiple outputs have pointers" $ do
       pc0 <- arbitrary
@@ -134,7 +134,7 @@ spec = describe "TxInfo" $ do
             , ltiMemoizedSubTransactions = mempty
             }
       pure $
-        (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
+        (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (metadataTxInfo SPlutusV4 ledgerTxInfo))
           `shouldBeLeft` inject
             ( PointerPresentInOutput @era . fromJust $
                 NES.fromSet [TxOutFromOutput $ TxIx 0, TxOutFromOutput $ TxIx 2]
@@ -163,7 +163,7 @@ spec = describe "TxInfo" $ do
             , ltiMemoizedSubTransactions = mempty
             }
       pure $
-        (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
+        (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (metadataTxInfo SPlutusV4 ledgerTxInfo))
           `shouldBeLeft` inject (ByronTxOutInContext @era (TxOutFromOutput $ TxIx 0))
     prop "Reports the first error kind when Ptr and Byron outputs are mixed" $ do
       pc0 <- arbitrary
@@ -191,7 +191,7 @@ spec = describe "TxInfo" $ do
             , ltiMemoizedSubTransactions = mempty
             }
       pure $
-        (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo))
+        (($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (metadataTxInfo SPlutusV4 ledgerTxInfo))
           `shouldBeLeft` inject
             ( PointerPresentInOutput @era . fromJust $
                 NES.fromSet [TxOutFromOutput $ TxIx 0, TxOutFromOutput $ TxIx 2]
@@ -220,7 +220,7 @@ spec = describe "TxInfo" $ do
             , ltiMemoizedSubTransactions = mempty
             }
       pure $
-        case ($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (toPlutusTxInfo SPlutusV4 ledgerTxInfo) of
+        case ($ SpendingPurpose AsPurpose) <$> unPlutusTxInfoResult (metadataTxInfo SPlutusV4 ledgerTxInfo) of
           Right (Right txInfo) ->
             map PV4.txOutAddress (PV4.txInfoOutputs txInfo)
               `shouldBe` [PV4.Address (transCred pc) Nothing | pc <- [pc0, pc1, pc2]]
@@ -237,7 +237,6 @@ spec = describe "TxInfo" $ do
         redeemer <- arbitrary
         exUnits <- arbitrary
         let
-          proxy = Proxy @PlutusV4
           script = Plutus.alwaysSucceedsNoDatum SPlutusV4
           scriptHash = hashPlutusScript script
           paymentCred2 = ScriptHashObj scriptHash
@@ -275,7 +274,7 @@ spec = describe "TxInfo" $ do
           transStakeRef _ = Nothing
           addr1 = PV4.Address (transCred paymentCred1) (transStakeRef stakeRef1)
           addr2 = PV4.Address (transCred paymentCred2) (transStakeRef stakeRef2)
-        pure $ case toPlutusTxInfo proxy lti of
+        pure $ case metadataTxInfo SPlutusV4 lti of
           PlutusTxInfoResult (Right f) ->
             f (hoistPlutusPurpose toAsPurpose purpose)
               `shouldBeRight` PV4.TxInfo
@@ -345,7 +344,7 @@ spec = describe "TxInfo" $ do
               }
           txInfoResult =
             ($ SpendingPurpose AsPurpose)
-              <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
+              <$> unPlutusTxInfoResult (metadataTxInfo slang ledgerTxInfo)
         txInfoResult
           `shouldBeLeft` inject (UnsupportedScriptInSubTx @era (plutusLanguage slang) (txIdTx tx))
       prop "DirectDepositsNotSupported" $ do
@@ -367,7 +366,7 @@ spec = describe "TxInfo" $ do
               }
           txInfoResult =
             ($ SpendingPurpose AsPurpose)
-              <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
+              <$> unPlutusTxInfoResult (metadataTxInfo slang ledgerTxInfo)
         pure $
           txInfoResult `shouldBeLeft` inject (DirectDepositsNotSupported @era dd)
       prop "AccountBalanceIntervalsNotSupported" $ \neAccountBalanceIntervals ->
@@ -387,7 +386,7 @@ spec = describe "TxInfo" $ do
               }
           txInfoResult =
             ($ SpendingPurpose AsPurpose)
-              <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
+              <$> unPlutusTxInfoResult (metadataTxInfo slang ledgerTxInfo)
          in
           txInfoResult `shouldBeLeft` inject (AccountBalanceIntervalsNotSupported @era abi)
       prop "GuardScriptHashesNotSupported" $ \(scriptHash :: ScriptHash) ->
@@ -408,7 +407,7 @@ spec = describe "TxInfo" $ do
               }
           txInfoResult =
             ($ SpendingPurpose AsPurpose)
-              <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
+              <$> unPlutusTxInfoResult (metadataTxInfo slang ledgerTxInfo)
          in
           txInfoResult `shouldBeLeft` inject (GuardScriptHashesNotSupported @era neScriptHashes)
       prop "RequiredTopLevelGuardsNotSupported" $ \neRequiredTopLevelGuards ->
@@ -427,7 +426,7 @@ spec = describe "TxInfo" $ do
               }
           txInfoResult =
             ($ SpendingPurpose AsPurpose)
-              <$> unPlutusTxInfoResult (toPlutusTxInfo slang ledgerTxInfo)
+              <$> unPlutusTxInfoResult (metadataTxInfo slang ledgerTxInfo)
          in
           txInfoResult
             `shouldBeLeft` inject (RequiredTopLevelGuardsNotSupported @era neRequiredTopLevelGuards)

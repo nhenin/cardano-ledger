@@ -10,6 +10,7 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Control.State.Transition (Event)
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Imp as ConwayImp
+import qualified Test.Cardano.Ledger.Dijkstra.Imp.CapacityDepositSpec as CAPACITY
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.CertSpec as CERT
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.EntitiesSpec as ENTITIES
 import qualified Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec as LEDGER
@@ -36,3 +37,4 @@ spec era = do
     POOL.spec
     UTXOW.spec
     UTXO.spec
+    CAPACITY.spec

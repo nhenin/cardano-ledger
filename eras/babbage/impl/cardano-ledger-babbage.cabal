@@ -177,6 +177,7 @@ library testlib
     Test.Cardano.Ledger.Babbage.Translation.TranslatableGen
     Test.Cardano.Ledger.Babbage.TreeDiff
     Test.Cardano.Ledger.Babbage.TxInfoSpec
+    Test.Cardano.Ledger.Babbage.TxInfo.Fixture
 
   visibility: public
   hs-source-dirs: testlib

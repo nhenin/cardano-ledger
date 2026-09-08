@@ -2,13 +2,55 @@
 
 ## 0.4.0.0
 
+* Pass current protocol parameters to Plutus context construction for both
+  top-level and subtransactions, retaining their original transaction IDs and
+  memoization keys. All Plutus versions executing in Dijkstra project only
+  application assets from created, spent, and referenced outputs. Implicit
+  outputs are strictly allocated using the current parameters; explicit stock
+  retains its allocation. Parameter-free projection rejects implicit outputs
+  with `MissingCapacityDepositParameters`; impossible allocations report
+  `CannotAllocateOutputCapacityDeposit`. Historical eras keep their existing
+  script-facing values.
+* Document the additional capacity-deposit management exposed by a change to
+  `coinsPerUTxOByte`, distinguishing historical allocation, current requirement
+  and release accounting without selecting a repricing policy.
+* Replace `BabbageTxOut DijkstraEra` with the Dijkstra-owned `DijkstraTxOut`.
+  Its compact `OutputValue` contains `CapacityDeposit` and `ApplicationAssets`.
+  `mkDijkstraTxOut` constructs an explicit allocation; generic value/coin lenses
+  access application assets. Output-pot getters count both allocations.
+* Introduce `DijkstraEraTxOut` with typed allocation and component lenses.
+  `Value DijkstraEra` remains `MaryValue` at shared compatibility boundaries;
+  it no longer describes the complete stored output allocation.
+  `getCapacityDepositRequirement` prices capacity separately from the minimum
+  application ADA exposed to generic output builders.
+* Encode explicit capacity deposits at output map key 4. Continue decoding
+  legacy maps and arrays as implicit allocations. Wire-form presence is separate
+  from the amount, so an explicit zero deposit is not an implicit marker.
+* Add contextful `TxOut.Translation` and `UTxO.Translation`: allocate legacy
+  holdings at the era boundary and every UTxO insertion path, preserving total
+  ADA and native assets without changing signed transaction bytes. Rebuild
+  instant stake from application ADA; capacity deposits do not contribute.
+* Check explicit deposits against the canonical output tariff. Check implicit
+  outputs for sufficient total ADA and an exact allocation, including CBOR
+  integer-width boundaries. Historical migration reports exceptional allocations
+  through its reporting API and preserves funds even when exact funding is
+  unavailable. This does not guarantee acceptance of every pre-fork transaction.
+* Count complete output pots in ordinary and nested-transaction conservation,
+  collateral validation, and invalid-transaction fees. Restructure collateral
+  returns on entry using the same translation as ordinary outputs.
+* Add `IncorrectCapacityDepositUTxO`, `ImplicitOutputTooSmallUTxO`, and
+  `UnableToAllocateCapacityDepositUTxO` failures, plus their subtransaction
+  counterparts, without renumbering existing failure tags.
+* Reject explicit allocations, including explicit zero, in the conformance
+  adapter until the formal model represents capacity deposits. Its remaining
+  implicit structural mapping does not establish ledger equivalence.
 * Remove re-exported `mintTxBodyL`, `mintedTxBodyF`, and `mintValueTxBodyF`; use the typed forging API from `Cardano.Ledger.Mary.Core`
 * Require `cardano-ledger-mary >=1.12`; public interfaces use the native-asset types from their new Mary modules
 * Re-export the typed forging API from `Cardano.Ledger.Dijkstra.Core`:
   - `Forging`, `MintedAssets`, and `BurnedAssets`, with their accessors and projections
   - `forgingTxBodyL`, `mintedAssetsTxBodyF`, `burnedAssetsTxBodyF`, and `forgingPoliciesTxBodyF`
 * Add `localProducedValue` helper in `UTxO` module
-* Add `ValueNotConservedInLegacyInLegacyMode` constructor to `DijkstraUtxoPredFailure`
+* Add `ValueNotConservedInLegacyMode` constructor to `DijkstraUtxoPredFailure`
 * Rename:
   - `DijkstraUtxoEnv` -> `UtxoEnv` and add `uePState` field
   - `dueSlot` -> `ueSlot`

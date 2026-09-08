@@ -95,7 +95,11 @@ collectPlutusScriptsWithContext ::
   UTxO era ->
   Either (NonEmpty (CollectError era)) [PlutusWithContext]
 collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
-  scriptsWithContextFromLedgerTxInfo ledgerTxInfo (pp ^. ppCostModelsL) neededPlutusScripts
+  scriptsWithContextFromLedgerTxInfoWithResult
+    ledgerTxInfo
+    (mkTxInfoResultWithPParams pp ledgerTxInfo)
+    (pp ^. ppCostModelsL)
+    neededPlutusScripts
   where
     -- We need to pass major protocol version to the script for script evaluation
     protVer = pp ^. ppProtocolVersionL
@@ -345,7 +349,7 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndC
         , ltiTx = tx
         , ltiMemoizedSubTransactions = mempty
         }
-    txInfoResult = mkTxInfoResult ledgerTxInfo
+    txInfoResult = mkTxInfoResultWithPParams pp ledgerTxInfo
     maxBudget = pp ^. ppMaxTxExUnitsL
     txBody = tx ^. bodyTxL
     wits = tx ^. witsTxL

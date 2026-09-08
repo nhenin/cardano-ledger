@@ -10,7 +10,6 @@ import Cardano.Ledger.Plutus (SLanguage (..))
 import Cardano.Protocol.Crypto (StandardCrypto)
 import qualified Cardano.Protocol.Leios.BlockHeader as Leios
 import qualified Test.Cardano.Base.QuickCheck as BaseQC
-import Test.Cardano.Ledger.Babbage.TxInfoSpec (txInfoSpec)
 import qualified Test.Cardano.Ledger.Babbage.TxInfoSpec as BabbageTxInfo
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Binary.RoundTrip (roundTripConwayCommonSpec)
@@ -28,7 +27,16 @@ import qualified Test.Cardano.Ledger.Dijkstra.GoldenSpec as GoldenSpec
 import qualified Test.Cardano.Ledger.Dijkstra.Imp as Imp
 import Test.Cardano.Ledger.Dijkstra.ImpTest ()
 import qualified Test.Cardano.Ledger.Dijkstra.Plutus.PlutusSpec as PlutusSpec
+import qualified Test.Cardano.Ledger.Dijkstra.TxInfo.ApplicationAssetsSpec as ApplicationAssetsTxInfoSpec
+import Test.Cardano.Ledger.Dijkstra.TxInfo.Fixture (metadataOutputWithFreeCapacity)
 import qualified Test.Cardano.Ledger.Dijkstra.TxInfoSpec as DijkstraTxInfoSpec
+import qualified Test.Cardano.Ledger.Dijkstra.TxOut.AccountingSpec as OutputAccountingSpec
+import qualified Test.Cardano.Ledger.Dijkstra.TxOut.HistoricalSpec as HistoricalOutputSpec
+import qualified Test.Cardano.Ledger.Dijkstra.TxOut.TranslationSpec as OutputTranslationSpec
+import qualified Test.Cardano.Ledger.Dijkstra.TxOut.Value.TranslationSpec as OutputValueTranslationSpec
+import qualified Test.Cardano.Ledger.Dijkstra.TxOut.ValueSpec as OutputValueSpec
+import qualified Test.Cardano.Ledger.Dijkstra.TxOutSpec as OutputSpec
+import qualified Test.Cardano.Ledger.Dijkstra.UTxO.TranslationSpec as UTxOTranslationSpec
 import Test.Cardano.Ledger.Era
 import Test.Cardano.Ledger.Shelley.JSON (roundTripJsonShelleyEraSpec)
 
@@ -38,6 +46,14 @@ instance EraSpec DijkstraEra where
 main :: IO ()
 main =
   ledgerEraTestMain @DijkstraEra $ do
+    ApplicationAssetsTxInfoSpec.spec
+    OutputValueSpec.spec
+    OutputValueTranslationSpec.spec
+    OutputAccountingSpec.spec
+    HistoricalOutputSpec.spec
+    OutputTranslationSpec.spec
+    OutputSpec.spec
+    UTxOTranslationSpec.spec
     describe "RoundTrip" $ do
       roundTripConwayCommonSpec @DijkstraEra
       prop "Block (Leios.Header)" $
@@ -52,9 +68,9 @@ main =
     GoldenSpec.spec
     roundTripJsonShelleyEraSpec @DijkstraEra
     describe "TxInfo" $ do
-      BabbageTxInfo.spec @DijkstraEra
-      txInfoSpec @DijkstraEra SPlutusV3
-      txInfoSpec @DijkstraEra SPlutusV4
+      BabbageTxInfo.specWithOutputPreparation @DijkstraEra metadataOutputWithFreeCapacity
+      BabbageTxInfo.txInfoSpecWithOutputPreparation @DijkstraEra metadataOutputWithFreeCapacity SPlutusV3
+      BabbageTxInfo.txInfoSpecWithOutputPreparation @DijkstraEra metadataOutputWithFreeCapacity SPlutusV4
       DijkstraTxInfoSpec.spec @DijkstraEra
     GoldenBinary.spec @DijkstraEra
     PlutusSpec.spec

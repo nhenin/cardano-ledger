@@ -56,7 +56,7 @@ spec = describe "UTXO" $ do
       let MaryValue c (MultiAsset mintedMultiAsset) =
             case txMinted ^. bodyTxL . outputsTxBodyL of
               Empty -> error "Empty outputs was unexpected"
-              txOut :<| _ -> txOut ^. valueTxOutL
+              txOut :<| _ -> txOut ^. potValueTxOutF
           burnTooMuchMultiAsset@(MultiAsset burnTooMuch) =
             MultiAsset (Map.map (Map.map (subtract tooMuch . negate)) mintedMultiAsset)
           -- Produced should contain positive value that was atttempted to be burned
@@ -66,7 +66,7 @@ spec = describe "UTXO" $ do
               & inputsTxBodyL .~ [txInAt 0 txMinted]
               & forgingTxBodyL .~ Forging burnTooMuchMultiAsset
       (_, rootTxOut) <- getImpRootTxOut
-      let rootTxOutValue = rootTxOut ^. valueTxOutL
+      let rootTxOutValue = rootTxOut ^. potValueTxOutF
       submitFailingTx
         (mkBasicTx txBody)
         [ injectFailure $

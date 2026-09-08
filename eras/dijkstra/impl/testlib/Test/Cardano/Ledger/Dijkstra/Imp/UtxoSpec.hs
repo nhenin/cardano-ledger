@@ -17,6 +17,7 @@ import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Dijkstra.Core
 import Cardano.Ledger.Dijkstra.Rules (DijkstraUtxoPredFailure (..))
 import Cardano.Ledger.Dijkstra.State
+import Cardano.Ledger.Dijkstra.TxOut.Translation (allocateCapacityDeposit)
 import Cardano.Ledger.Mary.Value (
   AssetName,
   MaryValue (..),
@@ -167,8 +168,8 @@ spec = describe "UTXO" $ do
                 -- in order to be able to submit this transaction when switched to legacy mode
                 -- (which doesn't support direct deposits)
                 expectedCoin =
-                  (topOut ^. coinTxOutL)
-                    <> (subOut ^. coinTxOutL)
+                  (topOut ^. potCoinsTxOutF)
+                    <> (subOut ^. potCoinsTxOutF)
                     <> topFee
                     <> topTreasury
                     <> subTreasury
@@ -225,7 +226,7 @@ spec = describe "UTXO" $ do
                       & subTransactionsTxBodyL .~ [subTx]
                 expected =
                   MaryValue
-                    ((topOut ^. coinTxOutL) <> (subOut ^. coinTxOutL) <> topFee)
+                    ((topOut ^. potCoinsTxOutF) <> (subOut ^. potCoinsTxOutF) <> topFee)
                     (tokens (topBurnAmount + subBurnAmount))
             expectProduced topTx expected
             pure topTx
@@ -432,16 +433,25 @@ spec = describe "UTXO" $ do
           mkBasicTxBody
             & directDepositsTxBodyL .~ DirectDeposits [(account, amount)]
     txInWithFunds :: Coin -> ImpTestM era TxIn
-    txInWithFunds amount = freshKeyAddr_ >>= \a -> sendCoinTo a amount
+    txInWithFunds amount = do
+      output <- mkTxOut amount
+      txInAt 0 <$> submitTx (mkBasicTx $ mkBasicTxBody & outputsTxBodyL .~ [output])
     mkTxOut :: Coin -> ImpTestM era (TxOut era)
-    mkTxOut amount = freshKeyAddr_ >>= \a -> pure $ mkBasicTxOut a (inject amount)
+    mkTxOut amount = do
+      pp <- getsPParams id
+      addr <- freshKeyAddr_
+      expectRightDeep $ allocateCapacityDeposit pp (mkBasicTxOut addr (inject amount))
     produceScriptAt :: ScriptHash -> Coin -> ImpTestM era TxIn
     produceScriptAt scriptHash amount = do
+      pp <- getsPParams id
       let addr = mkAddr scriptHash StakeRefNull
       let tx =
             mkBasicTx mkBasicTxBody
               & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr (inject amount)]
-      txInAt 0 <$> submitTx tx
+      withDatum <- fixupOutputDatums tx
+      outputs <-
+        traverse (expectRightDeep . allocateCapacityDeposit pp) (withDatum ^. bodyTxL . outputsTxBodyL)
+      txInAt 0 <$> submitTx (withDatum & bodyTxL . outputsTxBodyL .~ outputs)
 
 noBalanceFixup ::
   ( HasCallStack
@@ -458,8 +468,8 @@ noBalanceFixup =
     >=> fixupOutputDatums
     >=> fixupDatums
     >=> fixupRedeemerIndices
-    >=> fixupTxOuts
-    >=> fixupCollateralReturn
+    >=> fixupDijkstraTxOuts
+    >=> fixupDijkstraCollateralReturn
     >=> fixupRedeemers
     >=> fixupPPHash
     >=> updateAddrTxWits

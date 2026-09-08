@@ -283,6 +283,8 @@ addDummyWitsTx pp tx numKeyWits byronAttrs =
 
 -- | Same as `setMinCoinSizedTxOut`, except it doesn't require the size of the
 -- TxOut and will recompute it if needed. Initial amount is not important.
+-- In eras with a separate capacity deposit, this adjusts application coins
+-- only. A change in output size may require updating the deposit separately.
 setMinCoinTxOut :: EraTxOut era => PParams era -> TxOut era -> TxOut era
 setMinCoinTxOut = setMinCoinTxOutWith (==)
 

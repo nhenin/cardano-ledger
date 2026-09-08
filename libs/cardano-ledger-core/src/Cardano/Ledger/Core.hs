@@ -331,6 +331,8 @@ class
   -- | Every era, except Shelley, must be able to upgrade a `TxOut` from a previous era.
   upgradeTxOut :: EraTxOut (PreviousEra era) => TxOut (PreviousEra era) -> TxOut era
 
+  -- | Editable application assets. In eras with a separate capacity deposit,
+  -- use 'potValueTxOutF' to account for all holdings in the output.
   valueTxOutL :: Lens' (TxOut era) (Value era)
   valueTxOutL =
     lens
@@ -354,6 +356,24 @@ class
   -- | Lens for getting and setting in TxOut either an address or its compact
   -- version by doing the least amount of work.
   valueEitherTxOutL :: Lens' (TxOut era) (Either (Value era) (CompactForm (Value era)))
+
+  -- | All holdings in the output, including any separately stored capacity
+  -- deposit. Historical eras retain their existing value projection.
+  potValueTxOutF :: SimpleGetter (TxOut era) (Value era)
+  potValueTxOutF = valueTxOutL
+  {-# INLINE potValueTxOutF #-}
+
+  -- | Total output ADA. This read does not prescribe how to allocate a new total
+  -- between application coins and a capacity deposit.
+  potCoinsTxOutF :: SimpleGetter (TxOut era) Coin
+  potCoinsTxOutF = coinTxOutL
+  {-# INLINE potCoinsTxOutF #-}
+
+  -- | Compact total ADA for trusted UTxO accounting. Like 'compactCoinTxOutL',
+  -- this projection may fail for an unvalidated amount outside Word64 bounds.
+  compactPotCoinsTxOutF :: HasCallStack => SimpleGetter (TxOut era) (CompactForm Coin)
+  compactPotCoinsTxOutF = compactCoinTxOutL
+  {-# INLINE compactPotCoinsTxOutF #-}
 
   addrTxOutL :: Lens' (TxOut era) Addr
   addrTxOutL =
@@ -413,6 +433,7 @@ bootAddrTxOutF = to $ \txOut ->
     _ -> Nothing
 {-# INLINE bootAddrTxOutF #-}
 
+-- | Editable application ADA. Use 'potCoinsTxOutF' for total output accounting.
 coinTxOutL :: (HasCallStack, EraTxOut era) => Lens' (TxOut era) Coin
 coinTxOutL =
   lens

@@ -40,11 +40,16 @@ import Cardano.Ledger.Dijkstra.Era (
   DijkstraEra,
   SUBUTXO,
  )
+import Cardano.Ledger.Dijkstra.Rules.CapacityDeposit (validateOutputCapacityDeposit)
 import Cardano.Ledger.Dijkstra.Rules.Utxo (
   DijkstraUtxoPredFailure (..),
   conwayToDijkstraUtxoPredFailure,
+  updateDijkstraUTxOAndInstantStake,
  )
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody)
+import Cardano.Ledger.Dijkstra.TxOut (DijkstraEraTxOut)
+import Cardano.Ledger.Dijkstra.TxOut.CapacityDeposit (CapacityDeposit)
+import Cardano.Ledger.Dijkstra.TxOut.Translation (CapacityDepositAllocationError)
 import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Shelley.LedgerState (UTxOState, utxosDonationL, utxosUtxo)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -96,6 +101,9 @@ data DijkstraSubUtxoPredFailure era
   | -- | list of supplied transaction outputs that are too small,
     -- together with the minimum value for the given output.
     SubBabbageOutputTooSmallUTxO (NonEmpty (TxOut era, Coin))
+  | SubIncorrectCapacityDepositUTxO (NonEmpty (TxOut era, Mismatch RelEQ CapacityDeposit))
+  | SubImplicitOutputTooSmallUTxO (NonEmpty (TxOut era, Mismatch RelGTEQ Coin))
+  | SubUnableToAllocateCapacityDepositUTxO (NonEmpty (TxOut era, CapacityDepositAllocationError))
   deriving (Generic)
 
 deriving stock instance
@@ -190,13 +198,14 @@ instance
   , EraStake era
   , EraCertState era
   , DijkstraEraTxBody era
+  , DijkstraEraTxOut era
   , AlonzoEraTxWits era
   , ConwayEraGov era
   , EraRule "SUBUTXO" era ~ SUBUTXO era
+  , InjectRuleFailure "SUBUTXO" DijkstraSubUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" Shelley.ShelleyUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" Allegra.AllegraUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" Alonzo.AlonzoUtxoPredFailure era
-  , InjectRuleFailure "SUBUTXO" Babbage.BabbageUtxoPredFailure era
   ) =>
   STS (SUBUTXO era)
   where
@@ -214,13 +223,14 @@ dijkstraSubUtxoTransition ::
   ( EraTx era
   , EraStake era
   , DijkstraEraTxBody era
+  , DijkstraEraTxOut era
   , AlonzoEraTxWits era
   , STS (EraRule "SUBUTXO" era)
   , EraRule "SUBUTXO" era ~ SUBUTXO era
+  , InjectRuleFailure "SUBUTXO" DijkstraSubUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" Shelley.ShelleyUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" Allegra.AllegraUtxoPredFailure era
   , InjectRuleFailure "SUBUTXO" Alonzo.AlonzoUtxoPredFailure era
-  , InjectRuleFailure "SUBUTXO" Babbage.BabbageUtxoPredFailure era
   ) =>
   TransitionRule (EraRule "SUBUTXO" era)
 dijkstraSubUtxoTransition = do
@@ -249,7 +259,13 @@ dijkstraSubUtxoTransition = do
 
   runTestOnSignal $ Shelley.validateOutputBootAddrAttrsTooBig allOutputs
 
-  runTestOnSignal $ Babbage.validateOutputTooSmallUTxO pp allSizedOutputs
+  runTestOnSignal $
+    validateOutputCapacityDeposit
+      SubIncorrectCapacityDepositUTxO
+      SubImplicitOutputTooSmallUTxO
+      SubUnableToAllocateCapacityDepositUTxO
+      pp
+      allSizedOutputs
 
   netId <- liftSTS $ asks networkId
   runTestOnSignal $ Shelley.validateWrongNetwork netId allOutputs
@@ -257,7 +273,8 @@ dijkstraSubUtxoTransition = do
 
   case topTxIsPhase2Valid of
     Phase2Valid ->
-      Shelley.updateUTxOAndInstantStake
+      updateDijkstraUTxOAndInstantStake
+        pp
         txBody
         (\a b -> tellEvent $ TxUTxODiff a b)
         (utxoState & utxosDonationL <>~ txBody ^. treasuryDonationTxBodyL)
@@ -282,6 +299,9 @@ instance
       SubWrongNetworkInTxBody mm -> Sum SubWrongNetworkInTxBody 8 !> To mm
       SubOutsideForecast a -> Sum SubOutsideForecast 9 !> To a
       SubBabbageOutputTooSmallUTxO x -> Sum SubBabbageOutputTooSmallUTxO 10 !> To x
+      SubIncorrectCapacityDepositUTxO x -> Sum SubIncorrectCapacityDepositUTxO 11 !> To x
+      SubImplicitOutputTooSmallUTxO x -> Sum SubImplicitOutputTooSmallUTxO 12 !> To x
+      SubUnableToAllocateCapacityDepositUTxO x -> Sum SubUnableToAllocateCapacityDepositUTxO 13 !> To x
 
 instance
   ( Era era
@@ -302,6 +322,9 @@ instance
     8 -> SumD SubWrongNetworkInTxBody <! From
     9 -> SumD SubOutsideForecast <! From
     10 -> SumD SubBabbageOutputTooSmallUTxO <! From
+    11 -> SumD SubIncorrectCapacityDepositUTxO <! From
+    12 -> SumD SubImplicitOutputTooSmallUTxO <! From
+    13 -> SumD SubUnableToAllocateCapacityDepositUTxO <! From
     n -> Invalid n
 
 dijkstraUtxoToDijkstraSubUtxoPredFailure ::
@@ -331,3 +354,6 @@ dijkstraUtxoToDijkstraSubUtxoPredFailure = \case
   PtrPresentInCollateralReturn _ -> error "Impossible: `PtrPresentInCollateralReturn` for SUBUTXO"
   WithdrawalsExceedAccountBalance _ -> error "Impossible: `WithdrawalsExceedAccountBalance` for SUBUTXO"
   ValueNotConservedInLegacyMode _ -> error "Impossible: `ValueNotConservedInLegacyMode` for SUBUTXO"
+  IncorrectCapacityDepositUTxO outs -> SubIncorrectCapacityDepositUTxO outs
+  ImplicitOutputTooSmallUTxO outs -> SubImplicitOutputTooSmallUTxO outs
+  UnableToAllocateCapacityDepositUTxO outs -> SubUnableToAllocateCapacityDepositUTxO outs

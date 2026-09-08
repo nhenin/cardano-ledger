@@ -25,6 +25,7 @@ import Test.Cardano.Ledger.Babbage.ImpTest (
   freshKeyAddr_,
   getsPParams,
   submitFailingTx,
+  whenMajorVersionAtMost,
  )
 import Test.Cardano.Ledger.Common (SpecWith, describe)
 
@@ -39,7 +40,10 @@ spec = describe "UTXO" $ do
   -- TxOut too large for the included ADA, using a large inline datum
   -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1281
   -- TODO: Re-enable after issue is resolved, by removing this override
-  disableInConformanceIt "Min-utxo value with output too large" $ do
+  -- Before Dijkstra the supplied ADA is the whole output pot. Dijkstra's
+  -- native builder treats it as application ADA and adds capacity separately;
+  -- its implicit and explicit lanes have dedicated ledger tests.
+  disableInConformanceIt "Min-utxo value with output too large" $ whenMajorVersionAtMost @11 $ do
     pp <- getsPParams id
     addr <- freshKeyAddr_
     let

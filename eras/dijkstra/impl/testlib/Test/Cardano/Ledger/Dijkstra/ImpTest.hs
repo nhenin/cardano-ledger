@@ -19,7 +19,10 @@ module Test.Cardano.Ledger.Dijkstra.ImpTest (
   module Test.Cardano.Ledger.Conway.ImpTest,
   DijkstraEraImp,
   impDijkstraSatisfyNativeScript,
+  dijkstraFixupTxWithOutputFixup,
   fixupSubTransactions,
+  fixupDijkstraTxOuts,
+  fixupDijkstraCollateralReturn,
   balanceSubTransactions,
   switchTxToLegacyMode,
 ) where
@@ -28,6 +31,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeExpire,
   pattern RequireTimeStart,
  )
+import Cardano.Ledger.Babbage.Collateral (collOuts)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
@@ -43,7 +47,10 @@ import Cardano.Ledger.Dijkstra.Scripts (
   evalDijkstraNativeScript,
   pattern RequireGuard,
  )
+import Cardano.Ledger.Dijkstra.TxOut (CapacityDepositForm (..))
+import Cardano.Ledger.Dijkstra.TxOut.Translation (allocateCapacityDeposit)
 import Cardano.Ledger.Dijkstra.UTxO
+import Cardano.Ledger.Dijkstra.UTxO.Translation (fundCapacityDeposits)
 import Cardano.Ledger.Plutus
 import Cardano.Ledger.Shelley.API (mkStAnnTx)
 import Cardano.Ledger.Shelley.LedgerState
@@ -61,10 +68,13 @@ import Control.Monad.State (gets)
 import Data.Foldable
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (isJust, isNothing)
 import qualified Data.OMap.Strict as OMap
 import qualified Data.Set as Set
+import Data.Traversable (forM)
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.ImpTest
+import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Dijkstra.Era
 import Test.Cardano.Ledger.Dijkstra.Examples (exampleDijkstraGenesis)
 import Test.Cardano.Ledger.Imp.Common
@@ -81,12 +91,24 @@ instance ShelleyEraImp DijkstraEra where
         committeeMembersL
           %~ fmap (const $ addEpochInterval (impEraStartEpochNo @DijkstraEra) (EpochInterval 15))
 
+  -- The shared initializer inserts a fresh root output after era translation.
+  -- Allocate it before exposing the test state and rebuild application stake.
+  initImpTestState = do
+    initialState <- initNewEpochState >>= defaultInitImpTestState
+    let pp = initialState ^. impNESL . nesEsL . curPParamsEpochStateL
+        allocated = fundCapacityDeposits pp (initialState ^. impNESL . utxoL)
+    pure $
+      initialState
+        & impNESL . utxoL .~ allocated
+        & impNESL . nesEsL . esLStateL . lsUTxOStateL . instantStakeL
+          .~ addInstantStake allocated mempty
+
   impSatisfyNativeScript = impDijkstraSatisfyNativeScript
 
   modifyPParams = conwayModifyPParams
 
   fixupTx = dijkstraFixupTx
-  expectTxSuccess = impBabbageExpectTxSuccess
+  expectTxSuccess = expectDijkstraTxSuccess
   modifyImpInitProtVer = conwayModifyImpInitProtVer
   genRegTxCert = dijkstraGenRegTxCert
   genUnRegTxCert = dijkstraGenUnRegTxCert
@@ -121,6 +143,40 @@ class
   DijkstraEraImp era
 
 instance DijkstraEraImp DijkstraEra
+
+-- | The signed body retains its original output form, whereas the stored UTxO
+-- contains the allocation derived on entry. Keep the original transaction IDs
+-- when comparing the two representations.
+expectDijkstraTxSuccess ::
+  (HasCallStack, DijkstraEraImp era) => Tx TopTx era -> ImpTestM era ()
+expectDijkstraTxSuccess tx = do
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  utxo <- getUTxO
+  let body = tx ^. bodyTxL
+      subBodies = (^. bodyTxL) <$> OMap.elems (body ^. subTransactionsTxBodyL)
+      inputs = (body ^. inputsTxBodyL) <> foldMap' (^. inputsTxBodyL) subBodies
+      collaterals = body ^. collateralInputsTxBodyL
+      outputs = Map.toList . unUTxO . fundCapacityDeposits pp $ txouts body <> foldMap' txouts subBodies
+      returns = Map.toList . unUTxO . fundCapacityDeposits pp $ collOuts body
+  if tx ^. isPhase2ValidTxL == Phase2Valid
+    then do
+      impAnn "Inputs should be gone from UTxO" $
+        expectUTxOContent utxo [(txIn, isNothing) | txIn <- Set.toList inputs]
+      impAnn "Collateral inputs should still be in UTxO" $
+        expectUTxOContent utxo [(txIn, isJust) | txIn <- Set.toList $ Set.difference collaterals inputs]
+      impAnn "Allocated outputs should be in UTxO" $
+        expectUTxOContent utxo [(txIn, (== Just output)) | (txIn, output) <- outputs]
+      impAnn "Collateral return should not be in UTxO" $
+        expectUTxOContent utxo [(txIn, isNothing) | (txIn, _) <- returns]
+    else do
+      impAnn "Non-collateral inputs should still be in UTxO" $
+        expectUTxOContent utxo [(txIn, isJust) | txIn <- Set.toList $ Set.difference inputs collaterals]
+      impAnn "Collateral inputs should not be in UTxO" $
+        expectUTxOContent utxo [(txIn, isNothing) | txIn <- Set.toList collaterals]
+      impAnn "Outputs should not be in UTxO" $
+        expectUTxOContent utxo [(txIn, isNothing) | (txIn, _) <- outputs]
+      impAnn "Allocated collateral return should be in UTxO" $
+        expectUTxOContent utxo [(txIn, (== Just output)) | (txIn, output) <- returns]
 
 -- Partial implementation used for checking predicate failures
 instance InjectRuleFailure "LEDGER" Shelley.ShelleyDelegPredFailure DijkstraEra where
@@ -217,12 +273,78 @@ dijkstraFixupTx ::
   ) =>
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)
-dijkstraFixupTx tx = do
+dijkstraFixupTx = dijkstraFixupTxWithOutputFixup fixupDijkstraTxOuts
+
+-- | Select the top-level output-funding step before balancing fees and signing.
+-- Tests of intentionally implicit or misfunded outputs can retain those fields
+-- while keeping the complete witness, datum and fee fixup pipeline.
+dijkstraFixupTxWithOutputFixup ::
+  (HasCallStack, DijkstraEraImp era) =>
+  (Tx TopTx era -> ImpTestM era (Tx TopTx era)) ->
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
+dijkstraFixupTxWithOutputFixup fixupOutputs tx = do
   -- add top-level Plutus script witnesses so legacy detection sees them
   fixedUp <- fixupScriptWits =<< fixupSubTransactions tx
   isLegacy <- detectLegacyMode fixedUp
   balancedInLegacy <- if isLegacy then balanceSubTransactions fixedUp else pure fixedUp
-  babbageFixupTx balancedInLegacy
+  ( addNativeScriptTxWits
+      >=> fixupAuxDataHash
+      >=> addCollateralInput
+      >=> addRootTxIn
+      >=> fixupScriptWits
+      >=> fixupOutputDatums
+      >=> fixupDatums
+      >=> fixupRedeemerIndices
+      >=> fixupOutputs
+      >=> fixupDijkstraCollateralReturn
+      >=> alonzoFixupFees
+      >=> fixupRedeemers
+      >=> fixupPPHash
+      >=> updateAddrTxWits
+    )
+    balancedInLegacy
+
+-- | Generic builders specify application ADA. Add the capacity allocation
+-- before balancing so the requested amount remains available to applications
+-- and staking. Explicit allocations are intentional test inputs.
+fixupDijkstraTxOuts ::
+  (HasCallStack, DijkstraEraImp era) =>
+  Tx l era ->
+  ImpTestM era (Tx l era)
+fixupDijkstraTxOuts tx = do
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  outputs <- forM (tx ^. bodyTxL . outputsTxBodyL) $ \output ->
+    if output ^. capacityDepositFormTxOutL == ImplicitCapacityDeposit
+      then do
+        applicationOutput <-
+          if output ^. coinTxOutL == zero
+            then do
+              amount <- arbitrary
+              pure $ output & coinTxOutL .~ amount
+            else pure output
+        let
+          -- With application assets fixed, only the deposit's CBOR width can
+          -- grow. Starting at zero therefore reaches the least exact tariff.
+          allocate outputToPrice =
+            let required = getCapacityDepositRequirement pp outputToPrice
+             in if outputToPrice ^. capacityDepositTxOutL == required
+                  then outputToPrice
+                  else allocate (outputToPrice & capacityDepositTxOutL .~ required)
+        pure $ allocate (applicationOutput & capacityDepositFormTxOutL .~ ExplicitCapacityDeposit)
+      else pure output
+  pure $ tx & bodyTxL . outputsTxBodyL .~ outputs
+
+fixupDijkstraCollateralReturn ::
+  DijkstraEraImp era =>
+  Tx TopTx era ->
+  ImpTestM era (Tx TopTx era)
+fixupDijkstraCollateralReturn tx = do
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  let fundImplicit output
+        | output ^. capacityDepositFormTxOutL == ImplicitCapacityDeposit = ensureMinCoinTxOut pp output
+        | otherwise = output
+  pure $ tx & bodyTxL . collateralReturnTxBodyL %~ fmap fundImplicit
 
 detectLegacyMode ::
   DijkstraEraImp era =>
@@ -252,7 +374,7 @@ fixupSubTransactions tx = impAnn "fixupSubTransactions" $ do
       addSubTxIn
         >=> addNativeScriptTxWits
         >=> fixupAuxDataHash
-        >=> fixupTxOuts
+        >=> fixupDijkstraTxOuts
         >=> updateAddrTxWits
     addSubTxIn subTx
       | not (Set.null (subTx ^. bodyTxL . inputsTxBodyL)) = pure subTx
@@ -301,11 +423,13 @@ mkBalancerSubTx consumed produced = do
           GT -> (consumed <-> produced, mempty)
           LT -> (mempty, produced <-> consumed)
         -- a buffer to make both the input UTxO and the change output satisfy minCoin. It's added on both sides, so it cancels out.
-        minChangeCoin = ensureMinCoinTxOut pp (mkBasicTxOut addr mempty) ^. coinTxOutL
+        minChangeCoin = ensureMinCoinTxOut pp (mkBasicTxOut addr mempty) ^. potCoinsTxOutF
         inputCoin = minChangeCoin <> shortfall
         changeCoin = minChangeCoin <> surplus
-        changeOut = mkBasicTxOut addr (inject changeCoin)
-      newTxIn <- withFixup fixupTx $ sendCoinTo addr inputCoin
+      inputOut <- expectRightDeep $ allocateCapacityDeposit pp (mkBasicTxOut addr (inject inputCoin))
+      changeOut <- expectRightDeep $ allocateCapacityDeposit pp (mkBasicTxOut addr (inject changeCoin))
+      inputTx <- withFixup fixupTx $ submitTx $ mkBasicTx $ mkBasicTxBody & outputsTxBodyL .~ [inputOut]
+      let newTxIn = txInAt 0 inputTx
       let subTx =
             mkBasicTx mkBasicTxBody
               & bodyTxL . inputsTxBodyL .~ [newTxIn]

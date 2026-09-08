@@ -2,6 +2,12 @@
 
 ## 1.22.0.0
 
+* Add overridable `EraTxOut` getters `potValueTxOutF`, `potCoinsTxOutF`, and
+  `compactPotCoinsTxOutF` for total holdings, including a separate capacity
+  deposit. Historical era defaults retain their existing value and coin reads.
+* Use output-pot projections in `sumAllValue`, `sumAllCoin`, `sumUTxO`, and
+  `sumCoinUTxO`, so total UTxO accounting can differ from editable application
+  assets and staking coin in a future-era output.
 * Add new helpers with predicate failure injection. List below also shows direct mapping to older helpers without injection:
   - `?!.` -> `?!`
   - `?!#.` -> `?!#`

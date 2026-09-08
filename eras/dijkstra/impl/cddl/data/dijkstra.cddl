@@ -148,11 +148,16 @@ transaction_input = [transaction_id : transaction_id, index : uint .size 2]
 
 transaction_id = hash32
 
-; Both of the Alonzo and Babbage style TxOut formats are equally valid
-; and can be used interchangeably
-transaction_output = alonzo_transaction_output/ babbage_transaction_output
+; Dijkstra outputs separate application assets from their capacity deposit.
+; Legacy merged outputs remain decodable without rewriting signed transactions.
+; Their allocation is derived when they enter the stored UTxO.
+transaction_output =
+  split_transaction_output
+  / alonzo_transaction_output
+  / babbage_transaction_output
 
-alonzo_transaction_output = [address, amount : value, ? datum_hash : hash32]
+split_transaction_output =
+  {0 : address, 1 : value, ? 2 : datum_option, ? 3 : script_ref, 4 : coin}
 
 ; address format:
 ;   [ 8 bit header | payload ];
@@ -212,13 +217,6 @@ asset_name = bytes .size (0 .. 32)
 positive_coin = 1 .. max_word64
 
 max_word64 = 18446744073709551615
-
-babbage_transaction_output =
-  {   0 : address
-  ,   1 : value
-  , ? 2 : datum_option ; new
-  , ? 3 : script_ref   ; new
-  }
 
 datum_option = [0, hash32// 1, data]
 
@@ -451,6 +449,15 @@ plutus_v3_script = bytes
 
 ; Dijkstra introduces Plutus V4.
 plutus_v4_script = bytes
+
+alonzo_transaction_output = [address, amount : value, ? datum_hash : hash32]
+
+babbage_transaction_output =
+  {   0 : address
+  ,   1 : value
+  , ? 2 : datum_option ; new
+  , ? 3 : script_ref   ; new
+  }
 
 certificates = nonempty_oset<certificate>
 

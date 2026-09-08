@@ -235,6 +235,12 @@ class
   -- | Construct `PlutusTxInfo` for all supported languages in this era.
   mkTxInfoResult :: LedgerTxInfo era -> TxInfoResult era
 
+  -- | Construct contexts using the current protocol parameters when an era's
+  -- output projection requires them. Earlier eras retain their existing
+  -- translation through the default implementation.
+  mkTxInfoResultWithPParams :: PParams era -> LedgerTxInfo era -> TxInfoResult era
+  mkTxInfoResultWithPParams _ = mkTxInfoResult
+
   -- | `TxInfo` for the same language can be shared between executions of every script of the same
   -- version in a single transaction.
   --

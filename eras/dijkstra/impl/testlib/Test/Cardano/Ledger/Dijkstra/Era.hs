@@ -21,6 +21,7 @@ import Cardano.Ledger.Dijkstra.Scripts (DijkstraEraScript)
 import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody)
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
+import Cardano.Ledger.Dijkstra.TxOut (DijkstraEraTxOut)
 import Cardano.Ledger.Dijkstra.UTxO (DijkstraEraUTxO)
 import Cardano.Ledger.Plutus (Language (..))
 import Data.Coerce
@@ -85,6 +86,7 @@ class
   ( ConwayEraTest era
   , DijkstraEraPParams era
   , DijkstraEraTxBody era
+  , DijkstraEraTxOut era
   , DijkstraEraScript era
   , DijkstraEraUTxO era
   , Inject (DijkstraContextError era) (ContextError era)

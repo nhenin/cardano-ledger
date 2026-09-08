@@ -133,7 +133,9 @@ spec = describe "Invalid transactions" $ do
             let tx =
                   mkBasicTx mkBasicTxBody
                     & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr mempty]
-            let resetDataHash = dataHashTxOutL .~ SNothing
+            -- Rebuild the plain output while preserving its complete holdings.
+            -- Removing a datum hash can invalidate an era's priced allocation.
+            let resetDataHash txOut = mkBasicTxOut (txOut ^. addrTxOutL) (txOut ^. potValueTxOutF)
             let resetTxOutDataHash =
                   bodyTxL . outputsTxBodyL
                     %~ ( \case

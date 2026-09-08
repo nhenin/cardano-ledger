@@ -2,6 +2,9 @@
 
 ## 1.15.0.0
 
+* Export `potValueTxOutF`, `potCoinsTxOutF`, and `compactPotCoinsTxOutF` from
+  `Cardano.Ledger.Api.Tx.Out` to read all output holdings, including any separate
+  capacity deposit. Editable `valueTxOutL` and `coinTxOutL` retain their own role.
 * Remove `mintTxBodyL`, `mintedTxBodyF`, and `mintValueTxBodyF` from `Cardano.Ledger.Api.Tx.Body`; use the typed forging API
 * Rename `AnyEraTxBody.mintTxBodyG` to `forgingTxBodyG` and change its result from `Maybe MultiAsset` to `Maybe Forging`; it remains `Nothing` before Mary and `Just` for supported eras, including empty declarations
 * Require `cardano-ledger-mary >=1.12`; public interfaces use the native-asset types from their new Mary modules

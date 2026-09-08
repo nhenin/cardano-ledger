@@ -25,11 +25,16 @@ module Cardano.Ledger.Dijkstra.Rules.Utxo (
   UtxoEnv (..),
   DijkstraUtxoPredFailure (..),
   conwayToDijkstraUtxoPredFailure,
+  validateTotalCollateral,
+  collateralPotBalance,
+  updateDijkstraUTxOAndInstantStake,
+  updateDijkstraUTxOStatePhase2Invalid,
 ) where
 
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Alonzo.TxWits (unRedeemersL)
+import Cardano.Ledger.Babbage.Collateral (collOuts)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import Cardano.Ledger.BaseTypes (
   Mismatch (..),
@@ -40,6 +45,7 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   epochInfo,
   networkId,
+  strictMaybe,
   systemStart,
  )
 import Cardano.Ledger.Binary (
@@ -55,51 +61,62 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.Coin (Coin, DeltaCoin)
+import Cardano.Ledger.Coin (Coin, DeltaCoin, toDeltaCoin)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Core
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra, UTXO)
+import Cardano.Ledger.Dijkstra.Rules.CapacityDeposit (validateOutputCapacityDeposit)
 import Cardano.Ledger.Dijkstra.Rules.Utxos ()
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraEraTxBody (..))
+import Cardano.Ledger.Dijkstra.TxOut (DijkstraEraTxOut)
+import Cardano.Ledger.Dijkstra.TxOut.CapacityDeposit (CapacityDeposit)
+import Cardano.Ledger.Dijkstra.TxOut.Translation (CapacityDepositAllocationError)
 import Cardano.Ledger.Dijkstra.UTxO (
   DijkstraEraUTxO,
   dijkstraConsumed,
   plutusLegacyModeStAnnTxG,
  )
+import Cardano.Ledger.Dijkstra.UTxO.Translation (fundCapacityDeposits)
 import Cardano.Ledger.Plutus (OrdExUnits)
 import Cardano.Ledger.Rules.ValidationMode (Test, failOnJustStatic, runTest, runTestOnSignal)
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), utxosFeesL)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.UTxO (produced)
 import Cardano.Ledger.TxIn (TxIn)
+import Cardano.Ledger.Val ((<->))
+import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   Embed (..),
   Rule,
+  RuleType (Transition),
   STS (..),
   TRC (..),
   TransitionRule,
   failureOnNonEmptyMap,
   judgmentContext,
   liftSTS,
+  tellEvent,
   trans,
   validate,
  )
 import Data.Bifunctor
+import Data.Foldable (foldMap', sequenceA_)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.NonEmpty (NonEmptyMap)
 import qualified Data.Map.Strict as Map
+import Data.MapExtras (extractKeys)
 import qualified Data.OMap.Strict as OMap
 import Data.Set.NonEmpty (NonEmptySet)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
-import Lens.Micro ((&), (.~), (^.))
-import Validation (failureUnless)
+import Lens.Micro ((&), (.~), (<>~), (^.))
+import Validation (failureIf, failureUnless)
 
 data UtxoEnv era = UtxoEnv
   { ueSlot :: SlotNo
@@ -173,6 +190,12 @@ data DijkstraUtxoPredFailure era
   | -- | Legacy-mode top-level transaction does not self-balance
     ValueNotConservedInLegacyMode
       (Mismatch RelEQ (Value era))
+  | -- | Explicit capacity deposits must equal the required amount.
+    IncorrectCapacityDepositUTxO (NonEmpty (TxOut era, Mismatch RelEQ CapacityDeposit))
+  | -- | Implicit outputs must fund their capacity when entering the UTxO.
+    ImplicitOutputTooSmallUTxO (NonEmpty (TxOut era, Mismatch RelGTEQ Coin))
+  | -- | No exact capacity allocation exists for an implicit output.
+    UnableToAllocateCapacityDepositUTxO (NonEmpty (TxOut era, CapacityDepositAllocationError))
   deriving (Generic)
 
 type instance EraRuleFailure "UTXO" DijkstraEra = DijkstraUtxoPredFailure DijkstraEra
@@ -308,12 +331,73 @@ validateBatchCollateral ::
 validateBatchCollateral pp tx (UTxO utxo) =
   -- TODO OPTIMIZATION: Rewrite in a way that doesn't require this check when rules are executed without validation
   when (hasAnyRedeemers tx) $
-    Babbage.validateTotalCollateral pp (tx ^. bodyTxL) utxoCollateral
+    validateTotalCollateral pp (tx ^. bodyTxL) utxoCollateral
   where
     utxoCollateral = Map.restrictKeys utxo (tx ^. bodyTxL . collateralInputsTxBodyL)
     hasAnyRedeemers t =
       hasRedeemers t || any hasRedeemers (t ^. bodyTxL . subTransactionsTxBodyL)
     hasRedeemers = not . null . (^. witsTxL . rdmrsTxWitsL . unRedeemersL)
+
+-- | Collateral releases the complete input pots and retains the complete
+-- return pot, including capacity deposits on both sides.
+validateTotalCollateral ::
+  forall era rule.
+  ( BabbageEraTxBody era
+  , InjectRuleFailure rule Alonzo.AlonzoUtxoPredFailure era
+  , InjectRuleFailure rule Babbage.BabbageUtxoPredFailure era
+  ) =>
+  PParams era ->
+  TxBody TopTx era ->
+  Map.Map TxIn (TxOut era) ->
+  Test (EraRuleFailure rule era)
+validateTotalCollateral pp txBody utxoCollateral =
+  sequenceA_
+    [ first (fmap injectFailure) $ Alonzo.validateScriptsNotPaidUTxO utxoCollateral
+    , first (fmap injectFailure) $ validateCollateralContainsNonADA txBody utxoCollateral
+    , first (fmap injectFailure) $ Alonzo.validateInsufficientCollateral pp txBody balance
+    , first (fmap injectFailure) $
+        Babbage.validateCollateralEqBalance balance (txBody ^. totalCollateralTxBodyL)
+    , first (fmap injectFailure) $ failureIf (null utxoCollateral) (Alonzo.NoCollateralInputs @era)
+    ]
+  where
+    balance = collateralPotBalance txBody utxoCollateral
+
+collateralPotBalance ::
+  BabbageEraTxBody era =>
+  TxBody TopTx era ->
+  Map.Map TxIn (TxOut era) ->
+  DeltaCoin
+collateralPotBalance txBody utxoCollateral =
+  toDeltaCoin (foldMap' (^. potCoinsTxOutF) utxoCollateral)
+    <-> toDeltaCoin (strictMaybe mempty (^. potCoinsTxOutF) (txBody ^. collateralReturnTxBodyL))
+
+-- | Native assets must all return to the collateral output. Capacity is Ada
+-- only, so this check uses the application values and keeps the established
+-- collateral failure payload.
+validateCollateralContainsNonADA ::
+  forall era.
+  BabbageEraTxBody era =>
+  TxBody TopTx era ->
+  Map.Map TxIn (TxOut era) ->
+  Test (Alonzo.AlonzoUtxoPredFailure era)
+validateCollateralContainsNonADA txBody utxoCollateral =
+  failureUnless onlyAdaInCollateral $ Alonzo.CollateralContainsNonADA valueWithNonAda
+  where
+    onlyAdaInCollateral =
+      (utxoCollateralHasOnlyAda && areAllAdaOnly (txBody ^. collateralReturnTxBodyL))
+        || Val.isAdaOnly totalCollateralBalance
+    utxoCollateralHasOnlyAda = areAllAdaOnly utxoCollateral
+    valueWithNonAda =
+      case txBody ^. collateralReturnTxBodyL of
+        SNothing -> collateralBalance
+        SJust retTxOut ->
+          if utxoCollateralHasOnlyAda
+            then retTxOut ^. valueTxOutL
+            else collateralBalance
+    collateralBalance = foldMap' (^. valueTxOutL) utxoCollateral
+    totalCollateralBalance = case txBody ^. collateralReturnTxBodyL of
+      SNothing -> collateralBalance
+      SJust retTxOut -> collateralBalance <-> (retTxOut ^. valueTxOutL)
 
 -- | Ensure that value consumed and produced matches up exactly,  aggregated across the entire batch
 -- (top-level transaction and all its sub-transactions).
@@ -422,9 +506,15 @@ dijkstraUtxoTransition = do
           postSubsPState
           (txBody & subTransactionsTxBodyL .~ mempty)
 
-  {- ∀ txout ∈ allOuts txb, getValue txout ≥ inject (serSize txout * coinsPerUTxOByte pp) -}
+  {- Every created output funds its capacity deposit. -}
   let allSizedOutputs = txBody ^. allSizedOutputsTxBodyF
-  runTest $ Babbage.validateOutputTooSmallUTxO pp allSizedOutputs
+  runTest $
+    validateOutputCapacityDeposit
+      IncorrectCapacityDepositUTxO
+      ImplicitOutputTooSmallUTxO
+      UnableToAllocateCapacityDepositUTxO
+      pp
+      allSizedOutputs
 
   let allOutputs = fmap sizedValue allSizedOutputs
   {- ∀ txout ∈ allOuts txb, serSize (getValue txout) ≤ maxValSize pp -}
@@ -454,11 +544,110 @@ dijkstraUtxoTransition = do
   runTest $ Alonzo.validateTooManyCollateralInputs pp txBody
 
   () <- trans @(EraRule "UTXOS" era) $ TRC ((), (), stAnnTx)
-  Babbage.updateUTxOState
+  updateDijkstraUTxOState
     pp
     originalCertState
     tx
     (Conway.updateTreasuryDonation tx utxos)
+
+-- | Outputs enter the stored UTxO only after their capacity allocation is
+-- resolved. Signed transaction bodies retain their original bytes.
+updateDijkstraUTxOState ::
+  ( AlonzoEraTx era
+  , BabbageEraTxBody era
+  , DijkstraEraTxOut era
+  , EraStake era
+  , EraCertState era
+  , Event (EraRule "UTXO" era) ~ Alonzo.AlonzoUtxoEvent era
+  ) =>
+  PParams era ->
+  CertState era ->
+  Tx TopTx era ->
+  UTxOState era ->
+  Rule (EraRule "UTXO" era) 'Transition (UTxOState era)
+updateDijkstraUTxOState pp certState tx utxoState =
+  case tx ^. isPhase2ValidTxL of
+    Phase2Valid -> do
+      withDeposits <-
+        Shelley.updateUTxOStateDeposits
+          pp
+          certState
+          txBody
+          (tellEvent . Alonzo.TotalDeposits (hashAnnotated txBody))
+          utxoState
+      withOutputs <-
+        updateDijkstraUTxOAndInstantStake
+          pp
+          txBody
+          (\deleted added -> tellEvent $ Alonzo.TxUTxODiff deleted added)
+          withDeposits
+      pure $! withOutputs & utxosFeesL <>~ (txBody ^. feeTxBodyL)
+    Phase2Invalid -> pure $! updateDijkstraUTxOStatePhase2Invalid pp txBody utxoState
+  where
+    txBody = tx ^. bodyTxL
+
+-- | Apply the collateral branch after validation. Its fee credit counts every
+-- released capacity deposit and excludes the return output's complete pot.
+updateDijkstraUTxOStatePhase2Invalid ::
+  (BabbageEraTxBody era, DijkstraEraTxOut era, EraStake era) =>
+  PParams era ->
+  TxBody TopTx era ->
+  UTxOState era ->
+  UTxOState era
+updateDijkstraUTxOStatePhase2Invalid pp txBody utxoState =
+  utxoState
+    { utxosUtxo = UTxO (Map.union remaining (unUTxO returned))
+    , utxosFees = utxosFees utxoState <> fees
+    , utxosInstantStake =
+        deleteInstantStake
+          (UTxO deleted)
+          (addInstantStake returned (utxosInstantStake utxoState))
+    }
+  where
+    (remaining, deleted) =
+      extractKeys (unUTxO (utxosUtxo utxoState)) (txBody ^. collateralInputsTxBodyL)
+    returned = fundCapacityDeposits pp (collOuts txBody)
+    fees =
+      foldMap' (^. potCoinsTxOutF) deleted
+        <-> foldMap' (^. potCoinsTxOutF) (unUTxO returned)
+
+-- | Shared by top-level transactions and subtransactions. Instant stake is
+-- calculated from the stored application amount after capacity is allocated.
+updateDijkstraUTxOAndInstantStake ::
+  ( EraTxBody era
+  , DijkstraEraTxOut era
+  , EraStake era
+  , Monad m
+  ) =>
+  PParams era ->
+  TxBody l era ->
+  (UTxO era -> UTxO era -> m ()) ->
+  UTxOState era ->
+  m (UTxOState era)
+updateDijkstraUTxOAndInstantStake pp txBody utxoDiffEvent utxoState =
+  applyEnteringOutputs
+    utxoDiffEvent
+    (fundCapacityDeposits pp (txouts txBody))
+    (extractKeys (unUTxO (utxosUtxo utxoState)) (txBody ^. inputsTxBodyL))
+    utxoState
+
+applyEnteringOutputs ::
+  (EraStake era, Monad m) =>
+  (UTxO era -> UTxO era -> m ()) ->
+  UTxO era ->
+  (Map.Map TxIn (TxOut era), Map.Map TxIn (TxOut era)) ->
+  UTxOState era ->
+  m (UTxOState era)
+applyEnteringOutputs utxoDiffEvent enteringOutputs (remaining, deleted) utxoState = do
+  utxoDiffEvent (UTxO deleted) enteringOutputs
+  pure $!
+    utxoState
+      { utxosUtxo = UTxO (Map.union remaining (unUTxO enteringOutputs))
+      , utxosInstantStake =
+          deleteInstantStake
+            (UTxO deleted)
+            (addInstantStake enteringOutputs (utxosInstantStake utxoState))
+      }
 
 --------------------------------------------------------------------------------
 -- UTXO STS
@@ -470,6 +659,7 @@ instance
   , DijkstraEraUTxO era
   , EraStake era
   , DijkstraEraTxBody era
+  , DijkstraEraTxOut era
   , AlonzoEraTx era
   , EraRule "UTXO" era ~ UTXO era
   , InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure era
@@ -555,6 +745,9 @@ instance
       PtrPresentInCollateralReturn x -> Sum PtrPresentInCollateralReturn 22 !> To x
       WithdrawalsExceedAccountBalance mm -> Sum WithdrawalsExceedAccountBalance 23 !> To mm
       ValueNotConservedInLegacyMode mm -> Sum ValueNotConservedInLegacyMode 24 !> To mm
+      IncorrectCapacityDepositUTxO x -> Sum IncorrectCapacityDepositUTxO 25 !> To x
+      ImplicitOutputTooSmallUTxO x -> Sum ImplicitOutputTooSmallUTxO 26 !> To x
+      UnableToAllocateCapacityDepositUTxO x -> Sum UnableToAllocateCapacityDepositUTxO 27 !> To x
 
 instance
   ( Era era
@@ -590,6 +783,9 @@ instance
     22 -> SumD PtrPresentInCollateralReturn <! From
     23 -> SumD WithdrawalsExceedAccountBalance <! From
     24 -> SumD ValueNotConservedInLegacyMode <! From
+    25 -> SumD IncorrectCapacityDepositUTxO <! From
+    26 -> SumD ImplicitOutputTooSmallUTxO <! From
+    27 -> SumD UnableToAllocateCapacityDepositUTxO <! From
     n -> Invalid n
 
 -- =====================================================

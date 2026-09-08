@@ -36,6 +36,7 @@ import Cardano.Ledger.Dijkstra.Tx ()
 import Cardano.Ledger.Dijkstra.TxAuxData ()
 import Cardano.Ledger.Dijkstra.TxBody (upgradeGovAction, upgradeProposals)
 import Cardano.Ledger.Dijkstra.TxWits ()
+import Cardano.Ledger.Dijkstra.UTxO.Translation (translateUTxO)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
@@ -211,16 +212,24 @@ instance TranslateEra DijkstraEra ConwayGovState where
 
 instance TranslateEra DijkstraEra UTxOState where
   translateEra ctxt us =
-    pure
-      UTxOState
-        { utxosUtxo = translateEra' ctxt $ utxosUtxo us
-        , utxosDeposited = utxosDeposited us
-        , utxosFees = utxosFees us
-        , utxosGovState = translateEra' ctxt $ utxosGovState us
-        , utxosInstantStake = coerce $ utxosInstantStake us
-        , utxosDonation = utxosDonation us
-        }
+    let govState = translateEra' ctxt $ utxosGovState us
+        -- Pricing is available here, unlike in the context-free TxOut/UTxO
+        -- upgrades. Allocate historical outputs once with the current price.
+        utxo = translateUTxO (govState ^. curPParamsGovStateL) (utxosUtxo us)
+     in pure
+          UTxOState
+            { utxosUtxo = utxo
+            , utxosDeposited = utxosDeposited us
+            , utxosFees = utxosFees us
+            , utxosGovState = govState
+            , -- Dijkstra stake reads application ADA. Coercing the old cache would
+              -- retain the capacity allocation in delegated stake.
+              utxosInstantStake = addInstantStake utxo mempty
+            , utxosDonation = utxosDonation us
+            }
 
 instance TranslateEra DijkstraEra UTxO where
   translateEra _ctxt utxo =
+    -- Structural upgrade only: this instance has no current protocol price.
+    -- The UTxOState instance performs the contextful allocation above.
     pure $ UTxO $ upgradeTxOut `Map.map` unUTxO utxo

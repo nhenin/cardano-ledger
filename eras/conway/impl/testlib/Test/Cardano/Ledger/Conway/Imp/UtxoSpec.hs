@@ -117,10 +117,12 @@ spec = describe "UTXO" $ do
       addr1 <- freshKeyAddr_
       let txAmount = Coin 2000000
       txIn <- sendCoinTo addr1 txAmount
+      txInOutput <- impGetUTxO txIn
       addr2 <- freshKeyAddr_
       (_, rootTxOut) <- getImpRootTxOut
       let
-        rootTxOutValue = rootTxOut ^. valueTxOutL
+        rootTxOutValue = rootTxOut ^. potValueTxOutF
+        txInValue = txInOutput ^. potValueTxOutF
         txBody =
           mkBasicTxBody
             & inputsTxBodyL .~ [txIn]
@@ -136,8 +138,8 @@ spec = describe "UTXO" $ do
           [ injectFailure $
               Shelley.ValueNotConservedUTxO $
                 Mismatch
-                  (rootTxOutValue <> inject txAmount <> inject dRepDeposit)
-                  (rootTxOutValue <> inject txAmount)
+                  (rootTxOutValue <> txInValue <> inject dRepDeposit)
+                  (rootTxOutValue <> txInValue)
           , injectFailure $ Conway.ConwayDRepNotRegistered dRepCred
           ]
   describe "Reference scripts" $ do

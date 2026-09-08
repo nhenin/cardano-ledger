@@ -73,8 +73,6 @@ import Cardano.Ledger.Conway.TxInfo (
   transHotCommitteeCred,
   transMap,
   transProposal,
-  transTxInInfoV1,
-  transTxInInfoV3,
   transVoter,
  )
 import qualified Cardano.Ledger.Conway.TxInfo as Conway
@@ -88,6 +86,11 @@ import Cardano.Ledger.Dijkstra.Scripts (
   PlutusScript (..),
  )
 import Cardano.Ledger.Dijkstra.TxCert (DijkstraTxCert)
+import Cardano.Ledger.Dijkstra.TxOut (CapacityDepositForm (..))
+import Cardano.Ledger.Dijkstra.TxOut.Translation (
+  CapacityDepositAllocationError,
+  allocateCapacityDeposit,
+ )
 import Cardano.Ledger.Dijkstra.UTxO ()
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Plutus (
@@ -160,6 +163,10 @@ data DijkstraContextError era
     RequiredTopLevelGuardsNotSupported (NonEmptyMap (Credential Guard) (StrictMaybe (Data era)))
   | -- | Attempt to use PlutusV4 script with an invalid redeemer pointer will result in this failure
     ScriptHashNotFoundForPurpose (PlutusPurpose AsIx era)
+  | -- | An implicit output needs protocol parameters before its application assets can be projected.
+    MissingCapacityDepositParameters TxOutSource
+  | -- | An implicit output has no valid capacity allocation at the current price.
+    CannotAllocateOutputCapacityDeposit TxOutSource CapacityDepositAllocationError
   deriving (Generic)
 
 deriving instance
@@ -229,6 +236,10 @@ instance
       kindObjectValue "RequiredTopLevelGuardsNotSupported" ["required_top_level_guards" .= show rtlg]
     ScriptHashNotFoundForPurpose purpose ->
       kindObjectValue "ScriptHashNotFoundForPurpose" ["purpose" .= toJSON purpose]
+    MissingCapacityDepositParameters src ->
+      kindObjectValue "MissingCapacityDepositParameters" ["txOut" .= toJSON src]
+    CannotAllocateOutputCapacityDeposit src err ->
+      kindObjectValue "CannotAllocateOutputCapacityDeposit" ["txOut" .= toJSON src, "reason" .= show err]
 
 instance
   ( EraPParams era
@@ -250,6 +261,8 @@ instance
     22 -> SumD GuardScriptHashesNotSupported <! From
     23 -> SumD RequiredTopLevelGuardsNotSupported <! From
     24 -> SumD ScriptHashNotFoundForPurpose <! From
+    25 -> SumD MissingCapacityDepositParameters <! From
+    26 -> SumD CannotAllocateOutputCapacityDeposit <! From <! From
     k -> Invalid k
 
 instance
@@ -276,6 +289,9 @@ instance
         Sum RequiredTopLevelGuardsNotSupported 23 !> To rtlg
       ScriptHashNotFoundForPurpose purpose ->
         Sum ScriptHashNotFoundForPurpose 24 !> To purpose
+      MissingCapacityDepositParameters src -> Sum MissingCapacityDepositParameters 25 !> To src
+      CannotAllocateOutputCapacityDeposit src err ->
+        Sum CannotAllocateOutputCapacityDeposit 26 !> To src !> To err
 
 instance Inject (ConwayContextError era) (DijkstraContextError era) where
   inject = ConwayContextError
@@ -308,12 +324,9 @@ instance EraPlutusContext DijkstraEra where
     DijkstraPlutusV3 p -> SupportedPlutusRunnable $ decodePlutusRunnable v p
     DijkstraPlutusV4 p -> SupportedPlutusRunnable $ decodePlutusRunnable v p
 
-  mkTxInfoResult lti =
-    DijkstraTxInfoResult
-      (toPlutusTxInfo SPlutusV1 lti)
-      (toPlutusTxInfo SPlutusV2 lti)
-      (toPlutusTxInfo SPlutusV3 lti)
-      (toPlutusTxInfo SPlutusV4 lti)
+  mkTxInfoResult = mkDijkstraTxInfoResult Nothing
+
+  mkTxInfoResultWithPParams pp = mkDijkstraTxInfoResult (Just pp)
 
   lookupTxInfoResult SPlutusV1 (DijkstraTxInfoResult tirPlutusV1 _ _ _) = tirPlutusV1
   lookupTxInfoResult SPlutusV2 (DijkstraTxInfoResult _ tirPlutusV2 _ _) = tirPlutusV2
@@ -325,44 +338,15 @@ instance EraPlutusTxInfo 'PlutusV1 DijkstraEra where
 
   toPlutusScriptPurpose = Conway.transPlutusPurposeV1V2
 
-  toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
-    flip (withBothTxLevels ltiTx) transFailUnsupportedScriptInSubTx $ \tx -> PlutusTxInfoResult $ do
-      let txBody = tx ^. bodyTxL
-      Conway.guardConwayFeaturesForPlutusV1V2 tx
-      guardDijkstraFeaturesForPlutusV1toV3 tx
-      timeRange <- Conway.transValidityInterval tx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
-      inputs <- mapM (Conway.transTxInInfoV1 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
-      mapM_ (Conway.transTxInInfoV1 ltiUTxO) (Set.toList (txBody ^. referenceInputsTxBodyL))
-      outputs <-
-        zipWithM
-          (Conway.transTxOutV1 . TxOutFromOutput)
-          [minBound ..]
-          (F.toList (txBody ^. outputsTxBodyL))
-      txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      -- It is important for memoization for `txInfo` to be a let binding
-      let
-        txInfo =
-          PV1.TxInfo
-            { PV1.txInfoInputs = inputs
-            , PV1.txInfoOutputs = outputs
-            , PV1.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
-            , PV1.txInfoMint = PlutusV1V2.fromLedgerForging (txBody ^. forgingTxBodyL)
-            , PV1.txInfoDCert = txCerts
-            , PV1.txInfoWdrl = Alonzo.transTxBodyWithdrawals txBody
-            , PV1.txInfoValidRange = timeRange
-            , PV1.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
-            , PV1.txInfoData = Alonzo.transTxWitsDatums (tx ^. witsTxL)
-            , PV1.txInfoId = Alonzo.transTxBodyId txBody
-            }
-      Right $ \_ -> Right txInfo
+  toPlutusTxInfo = toDijkstraPlutusTxInfoV1 Nothing
 
   toPlutusArgs = Alonzo.toPlutusV1Args
 
-  toPlutusTxInInfo _ = transTxInInfoV1
+  toPlutusTxInInfo _ = transTxInInfoV1 Nothing
 
   toPlutusRedeemerPointer = Alonzo.transRedeemerPointerV1
 
-  toPlutusTxOut _ src txOut = Just <$> Conway.transTxOutV1 src txOut
+  toPlutusTxOut _ src txOut = Just <$> transTxOutV1 Nothing src txOut
 
 transTxCertV1V2 ::
   ( ConwayEraTxCert era
@@ -391,108 +375,30 @@ instance EraPlutusTxInfo 'PlutusV2 DijkstraEra where
 
   toPlutusScriptPurpose = Conway.transPlutusPurposeV1V2
 
-  toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
-    flip (withBothTxLevels ltiTx) transFailUnsupportedScriptInSubTx $ \tx -> PlutusTxInfoResult $ do
-      let txBody = tx ^. bodyTxL
-      Conway.guardConwayFeaturesForPlutusV1V2 tx
-      guardDijkstraFeaturesForPlutusV1toV3 tx
-      timeRange <-
-        Conway.transValidityInterval tx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
-      inputs <- mapM (Babbage.transTxInInfoV2 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
-      refInputs <- mapM (Babbage.transTxInInfoV2 ltiUTxO) (Set.toList (txBody ^. referenceInputsTxBodyL))
-      outputs <-
-        zipWithM
-          (Babbage.transTxOutV2 . TxOutFromOutput)
-          [minBound ..]
-          (F.toList (txBody ^. outputsTxBodyL))
-      txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx ltiUTxO
-      -- It is important for memoization for `txInfo` to be a let binding
-      let
-        txInfo =
-          PV2.TxInfo
-            { PV2.txInfoInputs = inputs
-            , PV2.txInfoOutputs = outputs
-            , PV2.txInfoReferenceInputs = refInputs
-            , PV2.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
-            , PV2.txInfoMint = PlutusV1V2.fromLedgerForging (txBody ^. forgingTxBodyL)
-            , PV2.txInfoDCert = txCerts
-            , PV2.txInfoWdrl = PV2.unsafeFromList $ Alonzo.transTxBodyWithdrawals txBody
-            , PV2.txInfoValidRange = timeRange
-            , PV2.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
-            , PV2.txInfoRedeemers = plutusRedeemers
-            , PV2.txInfoData = PV2.unsafeFromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
-            , PV2.txInfoId = Alonzo.transTxBodyId txBody
-            }
-      Right $ \_ -> Right txInfo
+  toPlutusTxInfo = toDijkstraPlutusTxInfoV2 Nothing
 
   toPlutusArgs = Babbage.toPlutusV2Args
 
-  toPlutusTxInInfo _ = Babbage.transTxInInfoV2
+  toPlutusTxInInfo _ = transTxInInfoV2 Nothing
 
   toPlutusRedeemerPointer = Babbage.transRedeemerPointerV2V3
 
-  toPlutusTxOut _ = Babbage.transTxOutV2
+  toPlutusTxOut _ = transTxOutV2 Nothing
 
 instance EraPlutusTxInfo 'PlutusV3 DijkstraEra where
   toPlutusTxCert _ _ = pure . transTxCertV3
 
   toPlutusScriptPurpose = Conway.transPlutusPurposeV3
 
-  toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
-    flip (withBothTxLevels ltiTx) transFailUnsupportedScriptInSubTx $ \tx -> PlutusTxInfoResult $ do
-      let
-        txBody = tx ^. bodyTxL
-        txInputs = txBody ^. inputsTxBodyL
-        refInputs = txBody ^. referenceInputsTxBodyL
-      guardDijkstraFeaturesForPlutusV1toV3 tx
-      timeRange <-
-        Conway.transValidityInterval tx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
-      inputsInfo <- mapM (Conway.transTxInInfoV3 ltiUTxO) (Set.toList txInputs)
-      refInputsInfo <- mapM (Conway.transTxInInfoV3 ltiUTxO) (Set.toList refInputs)
-      Conway.checkReferenceInputsNotDisjointFromInputs txBody
-      outputs <-
-        zipWithM
-          (Babbage.transTxOutV2 . TxOutFromOutput)
-          [minBound ..]
-          (F.toList (txBody ^. outputsTxBodyL))
-      txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx ltiUTxO
-      -- It is important for memoization for `txInfo` to be a let binding
-      let
-        txInfo =
-          PV3.TxInfo
-            { PV3.txInfoInputs = inputsInfo
-            , PV3.txInfoOutputs = outputs
-            , PV3.txInfoReferenceInputs = refInputsInfo
-            , PV3.txInfoFee = transCoinToLovelace (txBody ^. feeTxBodyL)
-            , PV3.txInfoMint = PlutusV3V4.fromLedgerForging (txBody ^. forgingTxBodyL)
-            , PV3.txInfoTxCerts = txCerts
-            , PV3.txInfoWdrl = Conway.transTxBodyWithdrawals txBody
-            , PV3.txInfoValidRange = timeRange
-            , PV3.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
-            , PV3.txInfoRedeemers = plutusRedeemers
-            , PV3.txInfoData = PV3.unsafeFromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
-            , PV3.txInfoId = Conway.transTxBodyId txBody
-            , PV3.txInfoVotes = Conway.transVotingProcedures (txBody ^. votingProceduresTxBodyL)
-            , PV3.txInfoProposalProcedures =
-                map (Conway.transProposal proxy) $ toList (txBody ^. proposalProceduresTxBodyL)
-            , PV3.txInfoCurrentTreasuryAmount =
-                strictMaybe Nothing (Just . transCoinToLovelace) $ txBody ^. currentTreasuryValueTxBodyL
-            , PV3.txInfoTreasuryDonation =
-                case txBody ^. treasuryDonationTxBodyL of
-                  Coin 0 -> Nothing
-                  coin -> Just $ transCoinToLovelace coin
-            }
-      Right $ \_ -> Right txInfo
+  toPlutusTxInfo = toDijkstraPlutusTxInfoV3 Nothing
 
   toPlutusArgs = Conway.toPlutusV3Args
 
-  toPlutusTxInInfo _ = transTxInInfoV3
+  toPlutusTxInInfo _ = transTxInInfoV3 Nothing
 
   toPlutusRedeemerPointer = Babbage.transRedeemerPointerV2V3
 
-  toPlutusTxOut _ = Babbage.transTxOutV2
+  toPlutusTxOut _ = transTxOutV2 Nothing
 
 guardDijkstraFeaturesForPlutusV1toV3 ::
   forall era.
@@ -610,111 +516,322 @@ instance EraPlutusTxInfo 'PlutusV4 DijkstraEra where
 
   toPlutusScriptPurpose = transPlutusPurposeV4
 
-  toPlutusTxInfo proxy LedgerTxInfo {..} =
-    PlutusTxInfoResult $ do
-      let
-        txBody = ltiTx ^. bodyTxL
-        txInputs = txBody ^. inputsTxBodyL
-        refInputs = txBody ^. referenceInputsTxBodyL
-      timeRange <-
-        Conway.transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
-      inputsInfo <- mapM (transTxInInfoV4 ltiUTxO) (Set.toList txInputs)
-      refInputsInfo <- mapM (transTxInInfoV4 ltiUTxO) (Set.toList refInputs)
-      Conway.checkReferenceInputsNotDisjointFromInputs txBody
-      let
-        accErrors acc (ix, txOut) =
-          let res = transTxOutV4 (TxOutFromOutput ix) txOut
-           in case acc of
-                Right l -> case res of
-                  Right x -> Right $ x : l
-                  Left e -> Left e
-                Left (PointerPresentInOutput errs)
-                  -- If the accumulator contains a PointerPresentInOutput, then
-                  -- continue translating to collect all the other PointerPresentInOutput
-                  -- failures
-                  | Left (PointerPresentInOutput err) <- res ->
-                      Left . PointerPresentInOutput $ err <> errs
-                Left e -> Left e
-      outputs <-
-        reverse
-          <$>
-          -- Use foldl here to collect errors from left to right (leftmost failure
-          -- takes precedence)
-          foldl'
-            accErrors
-            (Right mempty)
-            ([minBound ..] `zip` F.toList (txBody ^. outputsTxBodyL))
-      txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
-      plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer ltiTx ltiUTxO
-      let
-        txInfo =
-          PV4.TxInfo
-            { PV4.txInfoInputs = inputsInfo
-            , PV4.txInfoOutputs = outputs
-            , PV4.txInfoReferenceInputs = refInputsInfo
-            , PV4.txInfoFee =
-                withBothTxLevels txBody (\topTxBody -> transCoinToLovelace (topTxBody ^. feeTxBodyL)) (const 0)
-            , PV4.txInfoMint = PlutusV3V4.fromLedgerForging (txBody ^. forgingTxBodyL)
-            , PV4.txInfoTxCerts = txCerts
-            , PV4.txInfoValidRange = timeRange
-            , PV4.txInfoRedeemers = plutusRedeemers
-            , PV4.txInfoData = PV3.unsafeFromList $ Alonzo.transTxWitsDatums (ltiTx ^. witsTxL)
-            , PV4.txInfoId = Conway.transTxBodyId txBody
-            , PV4.txInfoVotes = Conway.transVotingProcedures (txBody ^. votingProceduresTxBodyL)
-            , PV4.txInfoProposalProcedures =
-                map (Conway.transProposal proxy) $ toList (txBody ^. proposalProceduresTxBodyL)
-            , PV4.txInfoCurrentTreasuryAmount =
-                strictMaybe Nothing (Just . transCoinToLovelace) $ txBody ^. currentTreasuryValueTxBodyL
-            , PV4.txInfoTreasuryDonation = transCoinToLovelace $ txBody ^. treasuryDonationTxBodyL
-            , PV4.txInfoSubTxIx = Nothing -- TODO thread the subtx index here
-            , PV4.txInfoWithdrawals = transTxBodyWithdrawals txBody
-            , PV4.txInfoDirectDeposits = transTxBodyDirectDeposits txBody
-            , PV4.txInfoAccountBalanceIntervals =
-                transAccountBalanceIntervals $ txBody ^. accountBalanceIntervalsTxBodyL
-            , PV4.txInfoGuards = transTxBodyGuards txBody
-            , PV4.txInfoRequiredTopLevelGuards = transTxBodyRequiredTopLevelGuards txBody
-            }
-      Right $ \_ -> Right txInfo
+  toPlutusTxInfo = toDijkstraPlutusTxInfoV4 Nothing
 
   toPlutusArgs = toPlutusV4Args
 
-  toPlutusTxInInfo _ = transTxInInfoV4
+  toPlutusTxInInfo _ = transTxInInfoV4 Nothing
 
   toPlutusRedeemerPointer = transRedeemerPointerV4
 
-  toPlutusTxOut _ = transTxOutV4
+  toPlutusTxOut _ = transTxOutV4 Nothing
+
+-- | Project individual outputs at the application boundary. In particular, do not
+-- replace the outputs in the signed body: its bytes, identifier and sub-transaction
+-- cache keys must remain those of the original transaction.
+mkDijkstraTxInfoResult ::
+  Maybe (PParams DijkstraEra) -> LedgerTxInfo DijkstraEra -> TxInfoResult DijkstraEra
+mkDijkstraTxInfoResult mpp lti =
+  DijkstraTxInfoResult
+    (toDijkstraPlutusTxInfoV1 mpp SPlutusV1 lti)
+    (toDijkstraPlutusTxInfoV2 mpp SPlutusV2 lti)
+    (toDijkstraPlutusTxInfoV3 mpp SPlutusV3 lti)
+    (toDijkstraPlutusTxInfoV4 mpp SPlutusV4 lti)
+
+toDijkstraPlutusTxInfoV1 ::
+  Maybe (PParams DijkstraEra) ->
+  proxy 'PlutusV1 ->
+  LedgerTxInfo DijkstraEra ->
+  PlutusTxInfoResult 'PlutusV1 DijkstraEra
+toDijkstraPlutusTxInfoV1 mpp proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
+  flip (withBothTxLevels ltiTx) transFailUnsupportedScriptInSubTx $ \tx -> PlutusTxInfoResult $ do
+    let txBody = tx ^. bodyTxL
+    Conway.guardConwayFeaturesForPlutusV1V2 tx
+    guardDijkstraFeaturesForPlutusV1toV3 tx
+    timeRange <- Conway.transValidityInterval tx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+    inputs <- mapM (transTxInInfoV1 mpp ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
+    mapM_ (transTxInInfoV1 mpp ltiUTxO) (Set.toList (txBody ^. referenceInputsTxBodyL))
+    outputs <-
+      zipWithM
+        (transTxOutV1 mpp . TxOutFromOutput)
+        [minBound ..]
+        (F.toList (txBody ^. outputsTxBodyL))
+    txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
+    -- It is important for memoization for `txInfo` to be a let binding
+    let
+      txInfo =
+        PV1.TxInfo
+          { PV1.txInfoInputs = inputs
+          , PV1.txInfoOutputs = outputs
+          , PV1.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
+          , PV1.txInfoMint = PlutusV1V2.fromLedgerForging (txBody ^. forgingTxBodyL)
+          , PV1.txInfoDCert = txCerts
+          , PV1.txInfoWdrl = Alonzo.transTxBodyWithdrawals txBody
+          , PV1.txInfoValidRange = timeRange
+          , PV1.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
+          , PV1.txInfoData = Alonzo.transTxWitsDatums (tx ^. witsTxL)
+          , PV1.txInfoId = Alonzo.transTxBodyId txBody
+          }
+    Right $ \_ -> Right txInfo
+
+toDijkstraPlutusTxInfoV2 ::
+  Maybe (PParams DijkstraEra) ->
+  proxy 'PlutusV2 ->
+  LedgerTxInfo DijkstraEra ->
+  PlutusTxInfoResult 'PlutusV2 DijkstraEra
+toDijkstraPlutusTxInfoV2 mpp proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
+  flip (withBothTxLevels ltiTx) transFailUnsupportedScriptInSubTx $ \tx -> PlutusTxInfoResult $ do
+    let txBody = tx ^. bodyTxL
+    Conway.guardConwayFeaturesForPlutusV1V2 tx
+    guardDijkstraFeaturesForPlutusV1toV3 tx
+    timeRange <-
+      Conway.transValidityInterval tx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+    inputs <- mapM (transTxInInfoV2 mpp ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
+    refInputs <- mapM (transTxInInfoV2 mpp ltiUTxO) (Set.toList (txBody ^. referenceInputsTxBodyL))
+    outputs <-
+      zipWithM
+        (transTxOutV2 mpp . TxOutFromOutput)
+        [minBound ..]
+        (F.toList (txBody ^. outputsTxBodyL))
+    txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
+    plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx ltiUTxO
+    -- It is important for memoization for `txInfo` to be a let binding
+    let
+      txInfo =
+        PV2.TxInfo
+          { PV2.txInfoInputs = inputs
+          , PV2.txInfoOutputs = outputs
+          , PV2.txInfoReferenceInputs = refInputs
+          , PV2.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
+          , PV2.txInfoMint = PlutusV1V2.fromLedgerForging (txBody ^. forgingTxBodyL)
+          , PV2.txInfoDCert = txCerts
+          , PV2.txInfoWdrl = PV2.unsafeFromList $ Alonzo.transTxBodyWithdrawals txBody
+          , PV2.txInfoValidRange = timeRange
+          , PV2.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
+          , PV2.txInfoRedeemers = plutusRedeemers
+          , PV2.txInfoData = PV2.unsafeFromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
+          , PV2.txInfoId = Alonzo.transTxBodyId txBody
+          }
+    Right $ \_ -> Right txInfo
+
+toDijkstraPlutusTxInfoV3 ::
+  Maybe (PParams DijkstraEra) ->
+  proxy 'PlutusV3 ->
+  LedgerTxInfo DijkstraEra ->
+  PlutusTxInfoResult 'PlutusV3 DijkstraEra
+toDijkstraPlutusTxInfoV3 mpp proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} =
+  flip (withBothTxLevels ltiTx) transFailUnsupportedScriptInSubTx $ \tx -> PlutusTxInfoResult $ do
+    let
+      txBody = tx ^. bodyTxL
+      txInputs = txBody ^. inputsTxBodyL
+      refInputs = txBody ^. referenceInputsTxBodyL
+    guardDijkstraFeaturesForPlutusV1toV3 tx
+    timeRange <-
+      Conway.transValidityInterval tx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+    inputsInfo <- mapM (transTxInInfoV3 mpp ltiUTxO) (Set.toList txInputs)
+    refInputsInfo <- mapM (transTxInInfoV3 mpp ltiUTxO) (Set.toList refInputs)
+    Conway.checkReferenceInputsNotDisjointFromInputs txBody
+    outputs <-
+      zipWithM
+        (transTxOutV2 mpp . TxOutFromOutput)
+        [minBound ..]
+        (F.toList (txBody ^. outputsTxBodyL))
+    txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
+    plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer tx ltiUTxO
+    -- It is important for memoization for `txInfo` to be a let binding
+    let
+      txInfo =
+        PV3.TxInfo
+          { PV3.txInfoInputs = inputsInfo
+          , PV3.txInfoOutputs = outputs
+          , PV3.txInfoReferenceInputs = refInputsInfo
+          , PV3.txInfoFee = transCoinToLovelace (txBody ^. feeTxBodyL)
+          , PV3.txInfoMint = PlutusV3V4.fromLedgerForging (txBody ^. forgingTxBodyL)
+          , PV3.txInfoTxCerts = txCerts
+          , PV3.txInfoWdrl = Conway.transTxBodyWithdrawals txBody
+          , PV3.txInfoValidRange = timeRange
+          , PV3.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
+          , PV3.txInfoRedeemers = plutusRedeemers
+          , PV3.txInfoData = PV3.unsafeFromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
+          , PV3.txInfoId = Conway.transTxBodyId txBody
+          , PV3.txInfoVotes = Conway.transVotingProcedures (txBody ^. votingProceduresTxBodyL)
+          , PV3.txInfoProposalProcedures =
+              map (Conway.transProposal proxy) $ toList (txBody ^. proposalProceduresTxBodyL)
+          , PV3.txInfoCurrentTreasuryAmount =
+              strictMaybe Nothing (Just . transCoinToLovelace) $ txBody ^. currentTreasuryValueTxBodyL
+          , PV3.txInfoTreasuryDonation =
+              case txBody ^. treasuryDonationTxBodyL of
+                Coin 0 -> Nothing
+                coin -> Just $ transCoinToLovelace coin
+          }
+    Right $ \_ -> Right txInfo
+
+toDijkstraPlutusTxInfoV4 ::
+  Maybe (PParams DijkstraEra) ->
+  proxy 'PlutusV4 ->
+  LedgerTxInfo DijkstraEra ->
+  PlutusTxInfoResult 'PlutusV4 DijkstraEra
+toDijkstraPlutusTxInfoV4 mpp proxy LedgerTxInfo {..} =
+  PlutusTxInfoResult $ do
+    let
+      txBody = ltiTx ^. bodyTxL
+      txInputs = txBody ^. inputsTxBodyL
+      refInputs = txBody ^. referenceInputsTxBodyL
+    timeRange <-
+      Conway.transValidityInterval ltiTx ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+    inputsInfo <- mapM (transTxInInfoV4 mpp ltiUTxO) (Set.toList txInputs)
+    refInputsInfo <- mapM (transTxInInfoV4 mpp ltiUTxO) (Set.toList refInputs)
+    Conway.checkReferenceInputsNotDisjointFromInputs txBody
+    let
+      accErrors acc (ix, txOut) =
+        let res = transTxOutV4 mpp (TxOutFromOutput ix) txOut
+         in case acc of
+              Right l -> case res of
+                Right x -> Right $ x : l
+                Left e -> Left e
+              Left (PointerPresentInOutput errs)
+                -- If the accumulator contains a PointerPresentInOutput, then
+                -- continue translating to collect all the other PointerPresentInOutput
+                -- failures
+                | Left (PointerPresentInOutput err) <- res ->
+                    Left . PointerPresentInOutput $ err <> errs
+              Left e -> Left e
+    outputs <-
+      reverse
+        <$>
+        -- Use foldl here to collect errors from left to right (leftmost failure
+        -- takes precedence)
+        foldl'
+          accErrors
+          (Right mempty)
+          ([minBound ..] `zip` F.toList (txBody ^. outputsTxBodyL))
+    txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
+    plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer ltiTx ltiUTxO
+    let
+      txInfo =
+        PV4.TxInfo
+          { PV4.txInfoInputs = inputsInfo
+          , PV4.txInfoOutputs = outputs
+          , PV4.txInfoReferenceInputs = refInputsInfo
+          , PV4.txInfoFee =
+              withBothTxLevels txBody (\topTxBody -> transCoinToLovelace (topTxBody ^. feeTxBodyL)) (const 0)
+          , PV4.txInfoMint = PlutusV3V4.fromLedgerForging (txBody ^. forgingTxBodyL)
+          , PV4.txInfoTxCerts = txCerts
+          , PV4.txInfoValidRange = timeRange
+          , PV4.txInfoRedeemers = plutusRedeemers
+          , PV4.txInfoData = PV3.unsafeFromList $ Alonzo.transTxWitsDatums (ltiTx ^. witsTxL)
+          , PV4.txInfoId = Conway.transTxBodyId txBody
+          , PV4.txInfoVotes = Conway.transVotingProcedures (txBody ^. votingProceduresTxBodyL)
+          , PV4.txInfoProposalProcedures =
+              map (Conway.transProposal proxy) $ toList (txBody ^. proposalProceduresTxBodyL)
+          , PV4.txInfoCurrentTreasuryAmount =
+              strictMaybe Nothing (Just . transCoinToLovelace) $ txBody ^. currentTreasuryValueTxBodyL
+          , PV4.txInfoTreasuryDonation = transCoinToLovelace $ txBody ^. treasuryDonationTxBodyL
+          , PV4.txInfoSubTxIx = Nothing -- TODO thread the subtx index here
+          , PV4.txInfoWithdrawals = transTxBodyWithdrawals txBody
+          , PV4.txInfoDirectDeposits = transTxBodyDirectDeposits txBody
+          , PV4.txInfoAccountBalanceIntervals =
+              transAccountBalanceIntervals $ txBody ^. accountBalanceIntervalsTxBodyL
+          , PV4.txInfoGuards = transTxBodyGuards txBody
+          , PV4.txInfoRequiredTopLevelGuards = transTxBodyRequiredTopLevelGuards txBody
+          }
+    Right $ \_ -> Right txInfo
 
 transTxInV4 :: TxIn -> PV4.TxOutRef
 transTxInV4 (TxIn txid txIx) = PV4.TxOutRef (transTxId txid) (toInteger (txIxToInt txIx))
 
-transTxInInfoV4 ::
-  forall era.
-  ( BabbageEraTxOut era
-  , Value era ~ MaryValue
-  , Inject (BabbageContextError era) (ContextError era)
-  , Inject (DijkstraContextError era) (ContextError era)
-  ) =>
-  UTxO era ->
+-- | Stored explicit outputs retain their historical allocation. An implicit
+-- output is allocated strictly using the current parameters, exactly as it will
+-- be allocated when inserted into the UTxO. This policy is common to V1--V4.
+applicationValueForContext ::
+  Maybe (PParams DijkstraEra) ->
+  TxOutSource ->
+  TxOut DijkstraEra ->
+  Either (ContextError DijkstraEra) MaryValue
+applicationValueForContext mpp src txOut =
+  case txOut ^. capacityDepositFormTxOutL of
+    ExplicitCapacityDeposit -> Right $ txOut ^. valueTxOutL
+    ImplicitCapacityDeposit -> case mpp of
+      Nothing -> Left $ MissingCapacityDepositParameters src
+      Just pp ->
+        fmap (^. valueTxOutL) $
+          first (CannotAllocateOutputCapacityDeposit src) $
+            allocateCapacityDeposit pp txOut
+
+transTxOutV1 ::
+  Maybe (PParams DijkstraEra) ->
+  TxOutSource ->
+  TxOut DijkstraEra ->
+  Either (ContextError DijkstraEra) PV1.TxOut
+transTxOutV1 mpp src txOut = do
+  translated <- Conway.transTxOutV1 src txOut
+  val <- applicationValueForContext mpp src txOut
+  pure translated {PV1.txOutValue = PlutusValue.fromLedgerMaryValue val}
+
+transTxOutV2 ::
+  Maybe (PParams DijkstraEra) ->
+  TxOutSource ->
+  TxOut DijkstraEra ->
+  Either (ContextError DijkstraEra) PV2.TxOut
+transTxOutV2 mpp src txOut = do
+  translated <- Babbage.transTxOutV2 src txOut
+  val <- applicationValueForContext mpp src txOut
+  pure translated {PV2.txOutValue = PlutusValue.fromLedgerMaryValue val}
+
+lookupContextTxOut ::
+  UTxO DijkstraEra -> TxIn -> Either (ContextError DijkstraEra) (TxOut DijkstraEra)
+lookupContextTxOut utxo = first (inject . AlonzoContextError @DijkstraEra) . Alonzo.transLookupTxOut utxo
+
+transTxInInfoV1 ::
+  Maybe (PParams DijkstraEra) ->
+  UTxO DijkstraEra ->
   TxIn ->
-  Either (ContextError era) PV4.TxInInfo
-transTxInInfoV4 utxo txIn = do
-  txOut <- first (inject . AlonzoContextError @era) $ Alonzo.transLookupTxOut utxo txIn
-  plutusTxOut <- transTxOutV4 (TxOutFromInput txIn) txOut
+  Either (ContextError DijkstraEra) PV1.TxInInfo
+transTxInInfoV1 mpp utxo txIn = do
+  translated <- Conway.transTxInInfoV1 utxo txIn
+  txOut <- lookupContextTxOut utxo txIn
+  out <- transTxOutV1 mpp (TxOutFromInput txIn) txOut
+  pure translated {PV1.txInInfoResolved = out}
+
+transTxInInfoV2 ::
+  Maybe (PParams DijkstraEra) ->
+  UTxO DijkstraEra ->
+  TxIn ->
+  Either (ContextError DijkstraEra) PV2.TxInInfo
+transTxInInfoV2 mpp utxo txIn = do
+  translated <- Babbage.transTxInInfoV2 utxo txIn
+  txOut <- lookupContextTxOut utxo txIn
+  out <- transTxOutV2 mpp (TxOutFromInput txIn) txOut
+  pure translated {PV2.txInInfoResolved = out}
+
+transTxInInfoV3 ::
+  Maybe (PParams DijkstraEra) ->
+  UTxO DijkstraEra ->
+  TxIn ->
+  Either (ContextError DijkstraEra) PV3.TxInInfo
+transTxInInfoV3 mpp utxo txIn = do
+  translated <- Conway.transTxInInfoV3 utxo txIn
+  txOut <- lookupContextTxOut utxo txIn
+  out <- transTxOutV2 mpp (TxOutFromInput txIn) txOut
+  pure translated {PV3.txInInfoResolved = out}
+
+transTxInInfoV4 ::
+  Maybe (PParams DijkstraEra) ->
+  UTxO DijkstraEra ->
+  TxIn ->
+  Either (ContextError DijkstraEra) PV4.TxInInfo
+transTxInInfoV4 mpp utxo txIn = do
+  txOut <- lookupContextTxOut utxo txIn
+  plutusTxOut <- transTxOutV4 mpp (TxOutFromInput txIn) txOut
   Right (PV4.TxInInfo (transTxInV4 txIn) plutusTxOut)
 
 transTxOutV4 ::
-  forall era.
-  ( BabbageEraTxOut era
-  , Value era ~ MaryValue
-  , Inject (BabbageContextError era) (ContextError era)
-  , Inject (DijkstraContextError era) (ContextError era)
-  ) =>
+  Maybe (PParams DijkstraEra) ->
   TxOutSource ->
-  TxOut era ->
-  Either (ContextError era) PV4.TxOut
-transTxOutV4 txOutSource txOut = do
+  TxOut DijkstraEra ->
+  Either (ContextError DijkstraEra) PV4.TxOut
+transTxOutV4 mpp txOutSource txOut = do
   let
-    val = PlutusValue.fromLedgerMaryValue $ txOut ^. valueTxOutL
     referenceScript = transReferenceScript $ txOut ^. referenceScriptTxOutL
     datum =
       case txOut ^. datumTxOutF of
@@ -734,8 +851,9 @@ transTxOutV4 txOutSource txOut = do
         PV4.Address (transCred pCred) <$> case stakeRef of
           StakeRefBase sCred -> Right . Just $ transCredToAccountId sCred
           StakeRefNull -> Right Nothing
-          StakeRefPtr _ -> Left . inject . PointerPresentInOutput @era $ NES.singleton txOutSource
-      AddrBootstrap _ -> Left . inject $ ByronTxOutInContext @era txOutSource
+          StakeRefPtr _ -> Left . inject . PointerPresentInOutput @DijkstraEra $ NES.singleton txOutSource
+      AddrBootstrap _ -> Left . inject $ ByronTxOutInContext @DijkstraEra txOutSource
+  val <- PlutusValue.fromLedgerMaryValue <$> applicationValueForContext mpp txOutSource txOut
   pure $
     PV4.TxOut
       { txOutReferenceScript = referenceScript

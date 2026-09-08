@@ -55,6 +55,8 @@ import Test.Cardano.Ledger.Allegra.Arbitrary (maxTimelockDepth)
 import Test.Cardano.Ledger.Alonzo.Arbitrary (genValidCostModel)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
+import Test.Cardano.Ledger.Dijkstra.TxOut ()
+import Test.Cardano.Ledger.Dijkstra.TxOut.Translation ()
 import Test.Cardano.Ledger.Shelley.Arbitrary (sizedNativeScriptGens)
 
 instance Arbitrary (DijkstraPParams Identity DijkstraEra) where

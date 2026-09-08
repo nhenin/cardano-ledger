@@ -197,7 +197,7 @@ sumCoinUTxO = sumAllCoin . unUTxO
 
 -- | Sum all the value in any Foldable with 'TxOut's
 sumAllValue :: (EraTxOut era, Foldable f) => f (TxOut era) -> Value era
-sumAllValue = foldMap' (^. valueTxOutL)
+sumAllValue = foldMap' (^. potValueTxOutF)
 {-# INLINE sumAllValue #-}
 
 -- | Sum all the 'Coin's in any Foldable with with 'TxOut's.
@@ -208,7 +208,7 @@ sumAllCoin :: (EraTxOut era, Foldable f) => f (TxOut era) -> Coin
 sumAllCoin = fromCompact . CompactCoin . getSum . foldMap' getCoinWord64
   where
     getCoinWord64 txOut =
-      case txOut ^. compactCoinTxOutL of
+      case txOut ^. compactPotCoinsTxOutF of
         CompactCoin w64 -> Sum w64
 {-# INLINE sumAllCoin #-}
 

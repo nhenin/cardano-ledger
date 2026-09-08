@@ -8,7 +8,12 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Test.Cardano.Ledger.Babbage.TxInfoSpec (txInfoSpec, spec) where
+module Test.Cardano.Ledger.Babbage.TxInfoSpec (
+  txInfoSpec,
+  txInfoSpecWithOutputPreparation,
+  spec,
+  specWithOutputPreparation,
+) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (
   ContextError,
@@ -17,10 +22,8 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   PlutusTxInInfo,
   PlutusTxInfo,
   PlutusTxOut,
-  toPlutusTxInfoForPurpose,
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..), TxOutSource (..))
-import Cardano.Ledger.Alonzo.Scripts (AsPurpose (..))
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.TxInfo (
   BabbageContextError (..),
@@ -54,6 +57,7 @@ import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 import qualified PlutusLedgerApi.V4 as PV4
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
+import Test.Cardano.Ledger.Babbage.TxInfo.Fixture (metadataTxInfo, prepareMetadataUTxO)
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkCredential, mkKeyPair)
@@ -213,7 +217,7 @@ successfulTranslation slang tx f =
           , ltiTx = tx
           , ltiMemoizedSubTransactions = mempty
           }
-   in case toPlutusTxInfoForPurpose slang lti (SpendingPurpose AsPurpose) of
+   in case metadataTxInfo slang lti of
         Right txInfo -> f slang txInfo
         Left e -> assertFailure $ "No translation error was expected, but got: " <> show e
 
@@ -237,7 +241,7 @@ expectTranslationError slang tx expected =
           , ltiTx = tx
           , ltiMemoizedSubTransactions = mempty
           }
-   in case toPlutusTxInfoForPurpose slang lti (SpendingPurpose AsPurpose) of
+   in case metadataTxInfo slang lti of
         Right txInfo ->
           assertFailure $ "This translation was expected to fail, but it succeeded: " <> show txInfo
         Left e -> e `shouldBe` expected
@@ -257,10 +261,11 @@ translatedOutputEx1 ::
   , Value era ~ MaryValue
   , EraPlutusTxInfo l era
   ) =>
+  (TxOut era -> TxOut era) ->
   PlutusTxOut l
-translatedOutputEx1 =
+translatedOutputEx1 prepareOutput =
   errorTranslate @era "translatedOutputEx1" $
-    toPlutusTxOut (Proxy @l) (TxOutFromOutput minBound) inlineDatumOutput
+    toPlutusTxOut (Proxy @l) (TxOutFromOutput minBound) (prepareOutput inlineDatumOutput)
 
 translatedOutputEx2 ::
   forall l era.
@@ -268,10 +273,11 @@ translatedOutputEx2 ::
   , EraPlutusTxInfo 'PlutusV2 era
   , EraPlutusTxInfo l era
   ) =>
+  (TxOut era -> TxOut era) ->
   PlutusTxOut l
-translatedOutputEx2 =
+translatedOutputEx2 prepareOutput =
   errorTranslate @era "translatedOutputEx2" $
-    toPlutusTxOut (Proxy @l) (TxOutFromOutput minBound) (refScriptOutput @l)
+    toPlutusTxOut (Proxy @l) (TxOutFromOutput minBound) (prepareOutput $ refScriptOutput @l)
 
 txInfoSpecV1 ::
   forall era.
@@ -323,7 +329,26 @@ txInfoSpec ::
   ) =>
   SLanguage l ->
   Spec
-txInfoSpec lang =
+txInfoSpec = txInfoSpecWithOutputPreparation @era @l id
+
+-- | Prepare independent output/input oracles for eras requiring an explicit
+-- allocation in their parameter-free output translator. The metadata context
+-- above uses zero price; callers must prepare fixtures at that same price.
+txInfoSpecWithOutputPreparation ::
+  forall era l.
+  ( EraTx era
+  , EraPlutusTxInfo l era
+  , EraPlutusTxInfo 'PlutusV2 era
+  , BabbageEraTxBody era
+  , Value era ~ MaryValue
+  , Inject (BabbageContextError era) (ContextError era)
+  , Show (PlutusTxInInfo era l)
+  , Eq (PlutusTxInInfo era l)
+  ) =>
+  (TxOut era -> TxOut era) ->
+  SLanguage l ->
+  Spec
+txInfoSpecWithOutputPreparation prepareOutput lang =
   describe (show lang) $ do
     it "translation error on byron txout" $
       expectTranslationError @era
@@ -352,27 +377,29 @@ txInfoSpec lang =
         lang
         (txBare inputWithInlineDatum shelleyOutput)
         ( \l txInfo -> do
-            txInInfo <- expectRight $ toPlutusTxInInfo l (exampleUTxO @l @era) inputWithInlineDatum
+            txInInfo <- expectRight $ toPlutusTxInInfo l preparedUTxO inputWithInlineDatum
             expectOneInput @era l txInInfo txInfo
         )
     it "use inline datum in output" $
       successfulTranslation @era
         lang
         (txBare shelleyInput inlineDatumOutput)
-        (expectOneOutput (translatedOutputEx1 @era @l))
+        (expectOneOutput (translatedOutputEx1 @era @l prepareOutput))
     it "use reference script in input" $
       successfulTranslation @era
         lang
         (txBare inputWithRefScript shelleyOutput)
         ( \l txInfo -> do
-            txInInfo <- expectRight $ toPlutusTxInInfo @_ @era l (exampleUTxO @l) inputWithRefScript
+            txInInfo <- expectRight $ toPlutusTxInInfo @_ @era l preparedUTxO inputWithRefScript
             expectOneInput @era l txInInfo txInfo
         )
     it "use reference script in output" $
       successfulTranslation @era
         lang
         (txBare shelleyInput $ refScriptOutput @l)
-        (expectOneOutput (translatedOutputEx2 @l @era))
+        (expectOneOutput (translatedOutputEx2 @l @era prepareOutput))
+  where
+    preparedUTxO = prepareMetadataUTxO prepareOutput (exampleUTxO @l @era)
 
 spec ::
   forall era.
@@ -384,10 +411,23 @@ spec ::
   , EraPlutusTxInfo 'PlutusV2 era
   ) =>
   Spec
-spec =
+spec = specWithOutputPreparation @era id
+
+specWithOutputPreparation ::
+  forall era.
+  ( EraTx era
+  , BabbageEraTxBody era
+  , Value era ~ MaryValue
+  , Inject (BabbageContextError era) (ContextError era)
+  , EraPlutusTxInfo 'PlutusV1 era
+  , EraPlutusTxInfo 'PlutusV2 era
+  ) =>
+  (TxOut era -> TxOut era) ->
+  Spec
+specWithOutputPreparation prepareOutput =
   describe "txInfo translation" $ do
     txInfoSpecV1 @era
-    txInfoSpec @era SPlutusV2
+    txInfoSpecWithOutputPreparation @era prepareOutput SPlutusV2
 
 genesisId :: TxId
 genesisId = TxId (unsafeMakeSafeHash (mkDummyHash (0 :: Int)))

@@ -2,6 +2,9 @@
 
 ## 1.17.0.0
 
+* Add `EraPlutusContext.mkTxInfoResultWithPParams` for parameter-dependent
+  context projection. Script collection and execution-budget estimation use
+  this hook; its default preserves existing era translations.
 * Remove re-exported `mintTxBodyL`, `mintedTxBodyF`, and `mintValueTxBodyF`; use the typed forging API from `Cardano.Ledger.Mary.Core`
 * Require `cardano-ledger-mary >=1.12` for the new native-asset modules and their types' defining-module metadata
 * Remove the following exports from `Cardano.Ledger.Alonzo.Plutus.TxInfo`; use their replacements:

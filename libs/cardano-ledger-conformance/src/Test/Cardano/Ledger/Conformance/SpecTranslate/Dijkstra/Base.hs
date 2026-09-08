@@ -32,7 +32,6 @@ import Cardano.Ledger.Allegra.Scripts (
 import Cardano.Ledger.Alonzo (AlonzoTxAuxData, MaryValue)
 import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..), unTxDats)
-import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
@@ -51,6 +50,13 @@ import Cardano.Ledger.Dijkstra.Scripts (
   DijkstraPlutusPurpose (..),
   pattern RequireGuard,
  )
+import Cardano.Ledger.Dijkstra.TxOut (
+  CapacityDepositForm (ImplicitCapacityDeposit),
+  DijkstraTxOut,
+  capacityDepositFormTxOutL,
+  capacityDepositTxOutL,
+ )
+import Cardano.Ledger.Dijkstra.TxOut.CapacityDeposit (CapacityDeposit (..))
 import Cardano.Ledger.HKD (HKD)
 import Cardano.Ledger.Plutus.CostModels (CostModels, costModelsValid)
 import Cardano.Ledger.Plutus.Data (BinaryData, Data, Datum (..), hashBinaryData)
@@ -64,6 +70,7 @@ import Cardano.Ledger.Shelley.Scripts (
  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val (Val (..))
+import Control.Monad (unless)
 import Control.Monad.Except (MonadError (..))
 import Data.Default (Default (..))
 import Data.Foldable (Foldable (..))
@@ -212,14 +219,22 @@ instance SpecTranslate DijkstraEra (AlonzoScript DijkstraEra) where
   toSpecRep (NativeScript s) = Left <$> toSpecRep s
   toSpecRep (PlutusScript s) = Right <$> toSpecRep s
 
-instance SpecTranslate DijkstraEra (BabbageTxOut DijkstraEra) where
-  type SpecRep DijkstraEra (BabbageTxOut DijkstraEra) = Agda.TxOut
+instance SpecTranslate DijkstraEra (DijkstraTxOut DijkstraEra) where
+  type SpecRep DijkstraEra (DijkstraTxOut DijkstraEra) = Agda.TxOut
 
-  toSpecRep (BabbageTxOut addr val datum script) = do
-    addr' <- toSpecRep addr
-    val' <- toSpecRep val
-    datum' <- toSpecRep datum
-    script' <- toSpecRep script
+  toSpecRep output = do
+    -- The formal output represents neither explicit allocation nor its presence
+    -- marker, including explicit zero. Retaining the implicit structural mapping
+    -- does not establish equivalence with Dijkstra's allocation rules.
+    unless
+      ( output ^. capacityDepositFormTxOutL == ImplicitCapacityDeposit
+          && output ^. capacityDepositTxOutL == CapacityDeposit (Coin 0)
+      )
+      $ throwError "The Dijkstra formal specification does not yet represent capacity deposits"
+    addr' <- toSpecRep $ output ^. addrTxOutL
+    val' <- toSpecRep $ output ^. valueTxOutL
+    datum' <- toSpecRep $ output ^. datumTxOutL
+    script' <- toSpecRep $ output ^. referenceScriptTxOutL
     pure (addr', (val', (datum', script')))
 
 instance SpecTranslate DijkstraEra (UTxO DijkstraEra) where

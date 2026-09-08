@@ -19,14 +19,11 @@ module Cardano.Ledger.Dijkstra (
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (
-  EraPlutusContext (mkTxInfoResult),
+  EraPlutusContext (mkTxInfoResultWithPParams),
   LedgerTxInfo (..),
   SupportedPlutusRunnable (..),
  )
-import Cardano.Ledger.Alonzo.Plutus.Evaluate (
-  scriptsWithContextFromLedgerTxInfo,
-  scriptsWithContextFromLedgerTxInfoWithResult,
- )
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (scriptsWithContextFromLedgerTxInfoWithResult)
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO,
   AlonzoScriptsNeeded,
@@ -154,7 +151,11 @@ mkDijkstraStAnnTopTx ei sysStart pp utxo stAnnTxCache tx =
       , dsattPlutusRunnableCache = newStAnnTxCache
       , dsattPlutusLanguagesUsed = languagesUsed
       , dsattPlutusScriptsWithContext =
-          scriptsWithContextFromLedgerTxInfo ledgerTxInfo (pp ^. ppCostModelsL) plutusScriptsUsed
+          scriptsWithContextFromLedgerTxInfoWithResult
+            ledgerTxInfo
+            (mkTxInfoResultWithPParams pp ledgerTxInfo)
+            (pp ^. ppCostModelsL)
+            plutusScriptsUsed
       , dsattSubTransactions = stAnnSubTxs
       }
 
@@ -187,7 +188,7 @@ mkDijkstraStAnnSubTx ei sysStart pp utxo scriptsProvided plutusScriptsCache tx =
         , ltiTx = tx
         , ltiMemoizedSubTransactions = mempty
         }
-    txInfoResult = mkTxInfoResult ledgerTxInfo
+    txInfoResult = mkTxInfoResultWithPParams pp ledgerTxInfo
    in
     DijkstraStAnnSubTx
       { dsastTx = tx

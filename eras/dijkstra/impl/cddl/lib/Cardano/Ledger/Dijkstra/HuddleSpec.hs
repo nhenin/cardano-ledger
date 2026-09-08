@@ -791,12 +791,25 @@ instance HuddleRule "babbage_transaction_output" DijkstraEra where
 instance HuddleRule "transaction_output" DijkstraEra where
   huddleRuleNamed pname p =
     comment
-      [str| Both of the Alonzo and Babbage style TxOut formats are equally valid
-          | and can be used interchangeably
+      [str| Dijkstra outputs separate application assets from their capacity deposit.
+          | Legacy merged outputs remain decodable without rewriting signed transactions.
+          | Their allocation is derived when they enter the stored UTxO.
           |]
       $ pname
-        =.= huddleRule @"alonzo_transaction_output" p
+        =.= huddleRule @"split_transaction_output" p
+        / huddleRule @"alonzo_transaction_output" p
         / huddleRule @"babbage_transaction_output" p
+
+instance HuddleRule "split_transaction_output" DijkstraEra where
+  huddleRuleNamed pname p =
+    pname
+      =.= mp
+        [ idx 0 ==> huddleRule @"address" p
+        , idx 1 ==> huddleRule @"value" p
+        , opt (idx 2 ==> huddleRule @"datum_option" p)
+        , opt (idx 3 ==> huddleRule @"script_ref" p)
+        , idx 4 ==> huddleRule @"coin" p
+        ]
 
 instance HuddleRule "sub_transaction_body" DijkstraEra where
   huddleRuleNamed = subTransactionBodyRule

@@ -23,10 +23,11 @@ spec = describe "UTXO" $ do
       addr1 <- freshKeyAddr_
       let txAmount = Coin 2000000
       txIn <- sendCoinTo addr1 txAmount
+      txInValue <- (^. potValueTxOutF) <$> impGetUTxO txIn
       addr2 <- freshKeyAddr_
       (_, rootTxOut) <- getImpRootTxOut
       let extra = Coin 3
-          rootTxOutValue = rootTxOut ^. valueTxOutL
+          rootTxOutValue = rootTxOut ^. potValueTxOutF
           txBody =
             mkBasicTxBody
               & inputsTxBodyL .~ [txIn]
@@ -44,6 +45,6 @@ spec = describe "UTXO" $ do
           [ injectFailure $
               ValueNotConservedUTxO $
                 Mismatch
-                  (rootTxOutValue <> inject txAmount)
-                  (rootTxOutValue <> inject (txAmount <> extra))
+                  (rootTxOutValue <> txInValue)
+                  (rootTxOutValue <> txInValue <> inject extra)
           ]

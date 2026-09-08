@@ -46,7 +46,7 @@ import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts (DijkstraEraScript (..), pattern GuardingPurpose)
 import Cardano.Ledger.Dijkstra.State
 import Cardano.Ledger.Dijkstra.Tx (DijkstraStAnnTx (..))
-import Cardano.Ledger.Mary.UTxO (burnedMultiAssets, getConsumedMaryValue)
+import Cardano.Ledger.Mary.UTxO (burnedMultiAssets)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus (Language, PlutusWithContext)
 import Data.Foldable (Foldable (..))
@@ -59,7 +59,7 @@ import Data.Set (Set)
 import Lens.Micro (SimpleGetter, to, (^.))
 import Lens.Micro.Extras (view)
 
-class AlonzoEraUTxO era => DijkstraEraUTxO era where
+class (AlonzoEraUTxO era, DijkstraEraTxOut era) => DijkstraEraUTxO era where
   subTransactionsStAnnTx :: StAnnTx TopTx era -> [StAnnTx SubTx era]
   plutusLegacyModeStAnnTxG :: SimpleGetter (StAnnTx TopTx era) Bool
   scriptsHashesNeededStAnnTx :: StAnnTx SubTx era -> Set ScriptHash
@@ -96,7 +96,11 @@ getConsumedDijkstraValue pp lookupStakingDeposit utxo txBody =
     txBodyConsumedValue
   where
     txBodyConsumedValue :: forall m. TxBody m era -> Value era
-    txBodyConsumedValue = getConsumedMaryValue pp lookupStakingDeposit utxo
+    txBodyConsumedValue body =
+      foldMap' (^. potValueTxOutF) (unUTxO (txInsFilter utxo (body ^. inputsTxBodyL)))
+        <> inject (getTotalRefundsTxBody pp lookupStakingDeposit body)
+        <> inject (fold (unWithdrawals (body ^. withdrawalsTxBodyL)))
+        <> MaryValue mempty (unMintedAssets (body ^. mintedAssetsTxBodyF))
     subTransactionsConsumedValue topTxBody =
       foldMap'
         (getConsumedValue pp lookupStakingDeposit utxo . view bodyTxL)
@@ -104,8 +108,8 @@ getConsumedDijkstraValue pp lookupStakingDeposit utxo txBody =
 
 dijkstraProducedValue ::
   forall era.
-  ( DijkstraEraTxBody era
-  , EraUTxO era
+  ( EraTx era
+  , DijkstraEraTxBody era
   , Value era ~ MaryValue
   ) =>
   PParams era ->
@@ -138,7 +142,7 @@ localProducedValue ::
   TxBody l era ->
   MaryValue
 localProducedValue pp txBody =
-  sumAllValue (txBody ^. outputsTxBodyL)
+  foldMap' (^. potValueTxOutF) (txBody ^. outputsTxBodyL)
     <> inject (txBody ^. treasuryDonationTxBodyL)
     <> inject (conwayProposalsDeposits pp txBody)
     <> burnedMultiAssets txBody
