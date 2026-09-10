@@ -2,6 +2,9 @@
 
 ## 1.22.0.0
 
+* Move `EraTxOut`, its associated `TxOut`, `Value`, and output helpers into
+  the internal `Cardano.Ledger.Core.TxOut` module. `Cardano.Ledger.Core`
+  continues to export the same interface; implementations are unchanged.
 * Add new helpers with predicate failure injection. List below also shows direct mapping to older helpers without injection:
   - `?!.` -> `?!`
   - `?!#.` -> `?!#`
