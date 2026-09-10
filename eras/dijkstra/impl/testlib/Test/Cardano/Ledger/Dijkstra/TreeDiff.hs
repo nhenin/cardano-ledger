@@ -56,6 +56,7 @@ import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (DijkstraTxBodyRaw (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
+import Cardano.Ledger.Dijkstra.TxOut (DijkstraTxOut, toBabbageTxOut)
 import Control.State.Transition (STS (..))
 import Data.Functor.Identity (Identity)
 import qualified Data.TreeDiff.OMap as OMap
@@ -67,6 +68,9 @@ instance
   ToExpr (DijkstraPlutusPurpose f DijkstraEra)
 
 instance ToExpr (PlutusScript DijkstraEra)
+
+instance ToExpr DijkstraTxOut where
+  toExpr = toExpr . toBabbageTxOut
 
 instance ToExpr (DijkstraNativeScript era)
 

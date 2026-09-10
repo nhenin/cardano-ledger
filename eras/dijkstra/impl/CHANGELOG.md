@@ -2,6 +2,11 @@
 
 ## 0.4.0.0
 
+* Give `TxOut DijkstraEra` its own `DijkstraTxOut` representation, retaining the
+  complete `MaryValue`, existing compact alternatives, field operations and
+  output formats. Export the `DijkstraTxOut` pattern and lossless mappings
+  `fromBabbageTxOut` / `toBabbageTxOut` for compatibility with existing operations.
+  Capacity deposits and application assets are not split in this step.
 * Remove re-exported `mintTxBodyL`, `mintedTxBodyF`, and `mintValueTxBodyF`; use the typed forging API from `Cardano.Ledger.Mary.Core`
 * Require `cardano-ledger-mary >=1.12`; public interfaces use the native-asset types from their new Mary modules
 * Re-export the typed forging API from `Cardano.Ledger.Dijkstra.Core`:
