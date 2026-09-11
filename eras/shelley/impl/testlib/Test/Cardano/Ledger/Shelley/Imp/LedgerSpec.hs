@@ -1,5 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Shelley.Imp.LedgerSpec (
   spec,
@@ -19,7 +21,7 @@ import Test.Cardano.Ledger.Shelley.ImpTest
 
 spec ::
   forall era.
-  ShelleyEraImp era =>
+  (ShelleyEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "LEDGER" $ do
   it "Transactions update UTxO" $ do

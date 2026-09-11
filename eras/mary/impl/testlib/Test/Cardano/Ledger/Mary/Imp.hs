@@ -15,6 +15,7 @@ import Test.Cardano.Ledger.Mary.ImpTest
 
 spec ::
   ( MaryEraImp era
+  , TxOutAllocation era ~ Value era
   , Event (EraRule "RUPD" era) ~ Shelley.RupdEvent
   ) =>
   proxy era ->

@@ -4,6 +4,7 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
 -- | Era-specific output types and their common operations.
@@ -75,6 +76,12 @@ class
   -- | The output of a UTxO for a particular era
   type TxOut era = (r :: Type) | r -> era
 
+  -- | Monetary components supplied when constructing an output. An era can
+  -- require an explicit allocation independently of its application value.
+  type TxOutAllocation era :: Type
+
+  type TxOutAllocation era = Value era
+
   {-# MINIMAL
     mkBasicTxOut
     , upgradeTxOut
@@ -83,7 +90,7 @@ class
     , (getMinCoinSizedTxOut | getMinCoinTxOut)
     #-}
 
-  mkBasicTxOut :: HasCallStack => Addr -> Value era -> TxOut era
+  mkBasicTxOut :: HasCallStack => Addr -> TxOutAllocation era -> TxOut era
 
   -- | Every era, except Shelley, must be able to upgrade a `TxOut` from a previous era.
   upgradeTxOut :: EraTxOut (PreviousEra era) => TxOut (PreviousEra era) -> TxOut era
@@ -214,8 +221,11 @@ toCompactPartial :: (HasCallStack, Val a) => a -> CompactForm a
 toCompactPartial v =
   fromMaybe (error $ "Illegal value in TxOut: " <> show v) $ toCompact v
 
--- A version of mkBasicTxOut, which has only a Coin (no multiAssets) for every EraTxOut era.
-mkCoinTxOut :: EraTxOut era => Addr -> Coin -> TxOut era
+-- | Construct an ADA-only output when its construction allocation is its value.
+-- Eras that require an additional allocation must supply it explicitly.
+mkCoinTxOut ::
+  (EraTxOut era, TxOutAllocation era ~ Value era) =>
+  Addr -> Coin -> TxOut era
 mkCoinTxOut addr = mkBasicTxOut addr . inject
 
 -- | A value is something which quantifies a transaction output.

@@ -7,6 +7,8 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Dijkstra.Imp.UtxoSpec (spec) where
 
@@ -44,7 +46,7 @@ import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
 
 spec ::
   forall era.
-  DijkstraEraImp era =>
+  (DijkstraEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXO" $ do
   describe "Collaterals" $ do
@@ -446,6 +448,7 @@ spec = describe "UTXO" $ do
 noBalanceFixup ::
   ( HasCallStack
   , DijkstraEraImp era
+  , TxOutAllocation era ~ Value era
   ) =>
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)

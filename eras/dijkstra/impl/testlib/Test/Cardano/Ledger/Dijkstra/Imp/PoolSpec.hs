@@ -3,6 +3,8 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Dijkstra.Imp.PoolSpec (spec) where
 
@@ -32,7 +34,7 @@ delegatorStake :: Coin
 delegatorStake = Coin 90_000_000_000_000
 
 registerPoolWithPledge ::
-  DijkstraEraImp era =>
+  (DijkstraEraImp era, TxOutAllocation era ~ Value era) =>
   Coin ->
   ImpTestM era (KeyHash StakePool, [Credential Staking])
 registerPoolWithPledge pledge = do
@@ -76,7 +78,7 @@ poolRewards = fmap fold . traverse getBalance
 -- The first pool is well pledged: its pledge is a tenth of its stake, which is exactly
 -- the leverage that `maxPledgeLeverage` is set to whenever it is set in this spec.
 rewardsOfWellAndOverPledgedPools ::
-  DijkstraEraImp era =>
+  (DijkstraEraImp era, TxOutAllocation era ~ Value era) =>
   ImpTestM era (Coin, Coin)
 rewardsOfWellAndOverPledgedPools = do
   -- ImpSpec starts out with the whole supply accounted for in the reserves, while at the
@@ -101,7 +103,9 @@ rewardsOfWellAndOverPledgedPools = do
   passNEpochs 3
   (,) <$> poolRewards (snd wellPledged) <*> poolRewards (snd overLeveraged)
 
-spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
+spec ::
+  forall era.
+  (DijkstraEraImp era, TxOutAllocation era ~ Value era) => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "POOL" $ do
   describe "maxPledgeLeverage" $ do
     -- The pledge influence factor also rewards a pool for pledging more, which would

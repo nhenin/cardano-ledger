@@ -4,6 +4,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 
 -- | Example demonstrating Genesis Delegation
 module Test.Cardano.Ledger.Shelley.Examples.GenesisDelegation (
@@ -65,7 +66,7 @@ import Test.Cardano.Ledger.Shelley.Utils (
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 
-initUTxO :: EraTxOut era => UTxO era
+initUTxO :: (EraTxOut era, TxOutAllocation era ~ Value era) => UTxO era
 initUTxO =
   genesisCoins
     genesisId
@@ -78,6 +79,7 @@ initUTxO =
 
 initStGenesisDeleg ::
   ( EraTxOut era
+  , TxOutAllocation era ~ Value era
   , EraGov era
   , EraStake era
   , EraCertState era

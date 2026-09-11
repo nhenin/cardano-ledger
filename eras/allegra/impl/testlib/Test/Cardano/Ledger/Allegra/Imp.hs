@@ -14,6 +14,7 @@ import qualified Test.Cardano.Ledger.Shelley.Imp as Shelley
 
 spec ::
   ( ShelleyEraImp era
+  , TxOutAllocation era ~ Value era
   , Event (EraRule "RUPD" era) ~ Shelley.RupdEvent
   ) =>
   proxy era ->

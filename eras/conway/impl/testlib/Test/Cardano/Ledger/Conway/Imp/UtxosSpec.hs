@@ -7,6 +7,8 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Conway.Imp.UtxosSpec (spec) where
 
@@ -54,7 +56,7 @@ import Test.Cardano.Ledger.Plutus.Examples (
 
 spec ::
   forall era.
-  ConwayEraImp era =>
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXOS" $ do
   govPolicySpec
@@ -79,7 +81,7 @@ spec = describe "UTXOS" $ do
 
 datumAndReferenceInputsSpec ::
   forall era.
-  ConwayEraImp era =>
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 datumAndReferenceInputsSpec = do
   for_ (eraLanguages @era) $ \lang ->
@@ -158,7 +160,7 @@ datumAndReferenceInputsSpec = do
 
 conwayFeaturesPlutusV1V2FailureSpec ::
   forall era.
-  ConwayEraImp era =>
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 conwayFeaturesPlutusV1V2FailureSpec = do
   describe "Conway features fail in Plutusdescribe v1 and v2" $ do
@@ -401,7 +403,7 @@ conwayFeaturesPlutusV1V2FailureSpec = do
 
 govPolicySpec ::
   forall era.
-  ConwayEraImp era =>
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 govPolicySpec = do
   describe "Gov policy scripts" $ do
@@ -484,7 +486,9 @@ govPolicySpec = do
         let tx = mkBasicTx mkBasicTxBody & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
         submitPhase2Invalid_ tx
 
-costModelsSpec :: forall era. ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
+costModelsSpec ::
+  forall era.
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) => SpecWith (ImpInit (LedgerSpec era))
 costModelsSpec =
   -- These tests rely on the script in the constitution, but we can only change the constitution after bootstrap.
   -- So we cannot run these tests during bootstrap
@@ -581,7 +585,7 @@ costModelsSpec =
 
 scriptLockedTxOut ::
   forall era.
-  AlonzoEraTxOut era =>
+  (AlonzoEraTxOut era, TxOutAllocation era ~ Value era) =>
   ScriptHash ->
   TxOut era
 scriptLockedTxOut shSpending =
@@ -593,6 +597,7 @@ scriptLockedTxOut shSpending =
 mkRefTxOut ::
   ( BabbageEraTxOut era
   , AlonzoEraImp era
+  , TxOutAllocation era ~ Value era
   ) =>
   ScriptHash ->
   ImpTestM era (TxOut era)
@@ -608,6 +613,7 @@ setupRefTx ::
   ( BabbageEraTxOut era
   , AlonzoEraImp era
   , PlutusLanguage l
+  , TxOutAllocation era ~ Value era
   ) =>
   SLanguage l ->
   ImpTestM era TxId
@@ -627,6 +633,7 @@ testPlutusV1V2Failure ::
   forall era a.
   ( HasCallStack
   , ConwayEraImp era
+  , TxOutAllocation era ~ Value era
   ) =>
   ScriptHash ->
   a ->

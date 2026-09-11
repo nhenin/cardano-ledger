@@ -4,6 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Shelley.MultiSigExamples (
   applyTxWithScript,
@@ -166,6 +167,7 @@ bobInitCoin = Coin 1000
 genesis ::
   forall era.
   ( EraTxOut era
+  , TxOutAllocation era ~ Value era
   , EraGov era
   , EraStake era
   , EraCertState era

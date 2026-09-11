@@ -141,7 +141,7 @@ class
   where
   scriptTestContexts :: Map ScriptHash ScriptTestContext
 
-makeCollateralInput :: ShelleyEraImp era => ImpTestM era TxIn
+makeCollateralInput :: (ShelleyEraImp era, TxOutAllocation era ~ Value era) => ImpTestM era TxIn
 makeCollateralInput = do
   -- TODO: make more accurate
   let collateral = Coin 30_000_000
@@ -149,7 +149,7 @@ makeCollateralInput = do
   withFixup fixupTx $ sendCoinTo addr collateral
 
 addCollateralInput ::
-  AlonzoEraImp era =>
+  (AlonzoEraImp era, TxOutAllocation era ~ Value era) =>
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)
 addCollateralInput tx
@@ -345,6 +345,7 @@ fixupOutputDatums tx = impAnn "fixupOutputDatums" $ do
 alonzoFixupTx ::
   ( HasCallStack
   , AlonzoEraImp era
+  , TxOutAllocation era ~ Value era
   ) =>
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)
@@ -366,7 +367,9 @@ alonzoFixupTx =
     >=> updateAddrTxWits
 
 alonzoFixupFees ::
-  forall era. (HasCallStack, AlonzoEraImp era) => Tx TopTx era -> ImpTestM era (Tx TopTx era)
+  forall era.
+  (HasCallStack, AlonzoEraImp era, TxOutAllocation era ~ Value era) =>
+  Tx TopTx era -> ImpTestM era (Tx TopTx era)
 alonzoFixupFees tx = do
   let originalRedeemers = tx ^. witsTxL . rdmrsTxWitsL
   txWithMax <- txWithMaxRedeemers tx
@@ -585,7 +588,7 @@ computeScriptIntegrityHash tx = fmap hashScriptIntegrity <$> impComputeScriptInt
 
 mkTxWithPlutusAndBootstrapAddress ::
   forall era l.
-  (AlonzoEraImp era, PlutusLanguage l) =>
+  (AlonzoEraImp era, PlutusLanguage l, TxOutAllocation era ~ Value era) =>
   SLanguage l ->
   ImpTestM era (Tx TopTx era)
 mkTxWithPlutusAndBootstrapAddress slang = do

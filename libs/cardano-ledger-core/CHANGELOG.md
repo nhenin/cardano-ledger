@@ -2,6 +2,10 @@
 
 ## 1.22.0.0
 
+* Add `TxOutAllocation` to `EraTxOut`, defaulting to `Value`, and use it as the
+  monetary input to `mkBasicTxOut`. `mkCoinTxOut` now requires
+  `TxOutAllocation era ~ Value era`; eras needing a separate allocation must
+  provide it explicitly. No era overrides the default in this step.
 * Move `EraTxOut`, its associated `TxOut`, `Value`, and output helpers into
   the internal `Cardano.Ledger.Core.TxOut` module. `Cardano.Ledger.Core`
   continues to export the same interface; implementations are unchanged.

@@ -7,6 +7,8 @@
 
 ### `testlib`
 
+* Require `TxOutAllocation era ~ Value era` for `exampleAllegraBasedTx` and
+  `Test.Cardano.Ledger.Allegra.Imp.spec`
 * Add `DecCBOR` instance for `Block`
 
 ## 1.10.0.0

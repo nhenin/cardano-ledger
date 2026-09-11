@@ -78,6 +78,7 @@ genAccountState Constants {minTreasury, maxTreasury, minReserves, maxReserves} =
 instance
   ( ApplyTx era
   , EraGen era
+  , TxOutAllocation era ~ Value era
   , EraGov era
   , EraUTxO era
   , EraCertState era
@@ -128,6 +129,7 @@ ledgersSigGen ::
   ( Crypto c
   , ApplyTx era
   , EraGen era
+  , TxOutAllocation era ~ Value era
   , ShelleyEraAccounts era
   , MinLEDGER_STS era
   , Embed (EraRule "DELPL" era) (CERTS era)
@@ -181,6 +183,7 @@ instance
   ( Crypto c
   , ApplyTx era
   , EraGen era
+  , TxOutAllocation era ~ Value era
   , EraGov era
   , EraUTxO era
   , EraStake era

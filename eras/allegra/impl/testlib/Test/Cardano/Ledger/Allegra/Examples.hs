@@ -3,6 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 -- | The example transactions in this module are not valid transactions. We
 -- don't care, we are only interested in serialisation, not validation.
@@ -60,6 +61,7 @@ exampleAllegraTx =
 exampleAllegraBasedTx ::
   forall era l.
   ( EraTx era
+  , TxOutAllocation era ~ Value era
   , AllegraEraTxAuxData era
   , AllegraEraScript era
   , AllegraEraTxBody era

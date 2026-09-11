@@ -8,6 +8,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Conway.Imp.UtxoSpec (
   spec,
@@ -40,7 +41,9 @@ import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsNoDatum)
 
-spec :: forall era. ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
+spec ::
+  forall era.
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXO" $ do
   describe "Certificates" $ do
     it "Reg/UnReg collect and refund correct amounts" $ do

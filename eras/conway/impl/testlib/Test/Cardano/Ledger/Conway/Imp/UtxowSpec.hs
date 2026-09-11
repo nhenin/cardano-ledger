@@ -5,6 +5,8 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Conway.Imp.UtxowSpec (spec) where
 
@@ -31,6 +33,7 @@ import Cardano.Ledger.Conway.Core (
   SafeHash,
   SafeToHash (..),
   TxLevel (..),
+  Value,
   ppCoinsPerUTxOByteL,
   txIdTx,
  )
@@ -51,7 +54,7 @@ import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
 
 spec ::
   forall era.
-  ConwayEraImp era =>
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXOW" $ do
   it "Fails with PPViewHashesDontMatch before PV 11" . whenMajorVersionAtMost @10 $ do
@@ -128,7 +131,7 @@ spec = describe "UTXOW" $ do
 
 setupBadPPViewHashTx ::
   forall era.
-  ConwayEraImp era =>
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   ImpTestM era (Tx TopTx era)
 setupBadPPViewHashTx = do
   modifyPParams $ ppCoinsPerUTxOByteL .~ CoinPerByte (CompactCoin 1)

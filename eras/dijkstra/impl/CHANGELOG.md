@@ -7,6 +7,26 @@
   output formats. Export the `DijkstraTxOut` pattern and lossless mappings
   `fromBabbageTxOut` / `toBabbageTxOut` for compatibility with existing operations.
   Capacity deposits and application assets are not split in this step.
+* Document the additional capacity-deposit management exposed by a change to
+  `coinsPerUTxOByte`, distinguishing historical allocation, current requirement
+  and release accounting without selecting a repricing policy.
+* Introduce the Dijkstra output-split model in `TxOut.ApplicationAssets`,
+  `TxOut.CapacityDeposit`, and `TxOut.Value`: the transitional `OutputValue`
+  contains both allocations and exposes their total ADA through `outputCoins`.
+  `TxOut.Value.Translation.fromMaryValue` maps a historical output's total
+  holdings using a caller-supplied deposit, rejecting negative or underfunded
+  allocations; `toMaryValue` projects total holdings without retaining the split.
+  `fromMaryOutputValue` derives the deposit from `getMinCoinTxOut` using the
+  supplied protocol parameters and complete source output, then performs the
+  checked split. It supports any `EraTxOut` whose `Value` is `MaryValue`.
+  `requiredCapacityDeposit` exposes the era's requirement independently of
+  the split.
+  These types are not yet integrated into `TxOut` storage or protocol rules.
+* Represent `ApplicationAssets` as a `newtype` of `MaryValue`, deriving `Val`,
+  arithmetic and CBOR/JSON instances while retaining the `applicationCoins` and
+  `nativeAssets` accessors and an adapted compact representation. These operations
+  concern only application quantities; `Value DijkstraEra` remains `MaryValue`
+  and no capacity deposit is allocated by this instance.
 * Remove re-exported `mintTxBodyL`, `mintedTxBodyF`, and `mintValueTxBodyF`; use the typed forging API from `Cardano.Ledger.Mary.Core`
 * Require `cardano-ledger-mary >=1.12`; public interfaces use the native-asset types from their new Mary modules
 * Re-export the typed forging API from `Cardano.Ledger.Dijkstra.Core`:
@@ -55,6 +75,8 @@
 
 ### testlib
 
+* Require `TxOutAllocation era ~ Value era` in generic output-construction
+  helpers, transaction fixups, examples and their dependent specs.
 * Add `switchTxToLegacyMode` helper
 * Add `balanceSubTransactions`
 * Expose `fixupSubTransactions`

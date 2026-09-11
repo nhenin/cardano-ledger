@@ -379,7 +379,7 @@ pickStakeKey keys = vKey . snd <$> QC.elements keys
 -- to include certificates that require deposits.
 genTxOut ::
   forall era.
-  EraTxOut era =>
+  (EraTxOut era, TxOutAllocation era ~ Value era) =>
   Gen (Value era) ->
   [Addr] ->
   Gen [TxOut era]

@@ -11,6 +11,11 @@
 * Change result of the the `querySetSnapshotStakePoolDistr` to a stable result types `QueryResultPoolDistr` with `QueryResultIndividualPoolStake`
 * Add `qripsBls` field to `QueryResultIndividualPoolStake`, exposing the pool's registered BLS key to consensus alongside `qripsVrf`. Encoded and decoded only from protocol version 12 (Dijkstra) onwards, so the `GetPoolDistr2` wire format is unchanged in earlier eras
 
+### Tests
+
+* Require `TxOutAllocation era ~ Value era` in the generic query spec whose
+  fixtures construct outputs from a value; query behavior is unchanged.
+
 ## 1.14.0.0
 
 * Rename `isValidTxG` to `isPhase2ValidTxG` in `AnyEraTx`, deprecating the old name

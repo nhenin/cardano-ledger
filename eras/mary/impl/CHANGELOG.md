@@ -18,6 +18,8 @@
 
 ### `testlib`
 
+* Require `TxOutAllocation era ~ Value era` for `exampleMaryBasedTx`,
+  `mkTokenMintingTx`, and the generic imp specs that construct outputs
 * Add `DecCBOR` instance for `Block`
 
 ## 1.11.0.0

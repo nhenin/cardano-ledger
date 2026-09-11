@@ -15,6 +15,8 @@
 
 ### `testlib`
 
+* Require `TxOutAllocation era ~ Value era` for generic examples, generators,
+  fixups and specs that construct outputs from a value; their behavior is unchanged.
 * Expose `fixupCollateralReturn`
 * Add `DecCBOR` instance for `Block`
 
