@@ -651,7 +651,7 @@ defaultInitNewEpochState modifyPrevEraNewEpochState = do
         nes
           & nesEsL . curPParamsEpochStateL . ppProtocolVersionL .~ ProtVer majProtVer 0
           & nesELL .~ pred (impEraStartEpochNo @era)
-  pure $ translateEra' genesis $ modifyPrevEraNewEpochState prevEraNewEpochState
+  pure $ translateEraWithoutError genesis $ modifyPrevEraNewEpochState prevEraNewEpochState
 
 -- | For debugging purposes we start the era at the epoch number that matches the starting
 -- protocol version for the era times a 100

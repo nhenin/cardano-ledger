@@ -53,7 +53,7 @@ instance TranslateEra BabbageEra NewEpochState where
         { nesEL = nesEL nes
         , nesBprev = nesBprev nes
         , nesBcur = nesBcur nes
-        , nesEs = translateEra' ctxt $ nesEs nes
+        , nesEs = translateEraWithoutError ctxt $ nesEs nes
         , nesRu = nesRu nes
         , nesPd = nesPd nes
         , stashedAVVMAddresses = ()
@@ -99,8 +99,8 @@ instance TranslateEra BabbageEra EpochState where
     pure
       EpochState
         { esChainAccountState = esChainAccountState es
-        , esSnapshots = translateEra' ctxt $ esSnapshots es
-        , esLState = translateEra' ctxt $ esLState es
+        , esSnapshots = translateEraWithoutError ctxt $ esSnapshots es
+        , esLState = translateEraWithoutError ctxt $ esLState es
         , esNonMyopic = esNonMyopic es
         }
 
@@ -122,27 +122,27 @@ instance TranslateEra BabbageEra ShelleyCertState where
   translateEra ctxt ls =
     pure
       ShelleyCertState
-        { shelleyCertDState = translateEra' ctxt $ shelleyCertDState ls
-        , shelleyCertPState = translateEra' ctxt $ shelleyCertPState ls
+        { shelleyCertDState = translateEraWithoutError ctxt $ shelleyCertDState ls
+        , shelleyCertPState = translateEraWithoutError ctxt $ shelleyCertPState ls
         }
 
 instance TranslateEra BabbageEra LedgerState where
   translateEra ctxt ls =
     pure
       LedgerState
-        { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
-        , lsCertState = translateEra' ctxt $ lsCertState ls
+        { lsUTxOState = translateEraWithoutError ctxt $ lsUTxOState ls
+        , lsCertState = translateEraWithoutError ctxt $ lsCertState ls
         }
 
 instance TranslateEra BabbageEra UTxOState where
   translateEra ctxt us =
     pure
       UTxOState
-        { utxosUtxo = translateEra' ctxt $ utxosUtxo us
+        { utxosUtxo = translateEraWithoutError ctxt $ utxosUtxo us
         , utxosDeposited = utxosDeposited us
         , utxosFees = utxosFees us
-        , utxosGovState = translateEra' ctxt $ utxosGovState us
-        , utxosInstantStake = translateEra' ctxt $ utxosInstantStake us
+        , utxosGovState = translateEraWithoutError ctxt $ utxosGovState us
+        , utxosInstantStake = translateEraWithoutError ctxt $ utxosInstantStake us
         , utxosDonation = utxosDonation us
         }
 
@@ -157,11 +157,11 @@ instance TranslateEra BabbageEra ShelleyGovState where
   translateEra ctxt ps =
     pure
       ShelleyGovState
-        { sgsCurProposals = translateEra' ctxt $ sgsCurProposals ps
-        , sgsFutureProposals = translateEra' ctxt $ sgsFutureProposals ps
-        , sgsCurPParams = translateEra' ctxt $ sgsCurPParams ps
-        , sgsPrevPParams = translateEra' ctxt $ sgsPrevPParams ps
-        , sgsFuturePParams = translateEra' ctxt $ sgsFuturePParams ps
+        { sgsCurProposals = translateEraWithoutError ctxt $ sgsCurProposals ps
+        , sgsFutureProposals = translateEraWithoutError ctxt $ sgsFutureProposals ps
+        , sgsCurPParams = translateEraWithoutError ctxt $ sgsCurPParams ps
+        , sgsPrevPParams = translateEraWithoutError ctxt $ sgsPrevPParams ps
+        , sgsFuturePParams = translateEraWithoutError ctxt $ sgsFuturePParams ps
         }
 
 instance TranslateEra BabbageEra ProposedPPUpdates where

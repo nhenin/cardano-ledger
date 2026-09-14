@@ -14,7 +14,7 @@ module Cardano.Ledger.Core.Translation (
   TranslateEra,
   translateEra,
   translateEraMaybe,
-  translateEra',
+  translateEraWithoutError,
   translateEraThroughCBOR,
 ) where
 
@@ -94,12 +94,12 @@ class (Era era, Era (PreviousEra era)) => TranslateEra era f where
 
 -- | Variant of 'translateEra' for when 'TranslationError' is 'Void' and the
 -- translation thus cannot fail.
-translateEra' ::
+translateEraWithoutError ::
   (TranslateEra era f, TranslationError era f ~ Void) =>
   TranslationContext era ->
   f (PreviousEra era) ->
   f era
-translateEra' ctxt = either absurd id . runExcept . translateEra ctxt
+translateEraWithoutError ctxt = either absurd id . runExcept . translateEra ctxt
 
 -- | Variant of 'translateEra' for when 'TranslationError' is '()', converting
 -- the result to a 'Maybe'.

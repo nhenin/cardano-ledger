@@ -55,7 +55,7 @@ instance TranslateEra MaryEra NewEpochState where
         { nesEL = nesEL nes
         , nesBprev = nesBprev nes
         , nesBcur = nesBcur nes
-        , nesEs = translateEra' ctxt $ nesEs nes
+        , nesEs = translateEraWithoutError ctxt $ nesEs nes
         , nesRu = nesRu nes
         , nesPd = nesPd nes
         , stashedAVVMAddresses = ()
@@ -87,8 +87,8 @@ instance TranslateEra MaryEra EpochState where
     return
       EpochState
         { esChainAccountState = esChainAccountState es
-        , esSnapshots = translateEra' ctxt $ esSnapshots es
-        , esLState = translateEra' ctxt $ esLState es
+        , esSnapshots = translateEraWithoutError ctxt $ esSnapshots es
+        , esLState = translateEraWithoutError ctxt $ esLState es
         , esNonMyopic = esNonMyopic es
         }
 
@@ -110,42 +110,42 @@ instance TranslateEra MaryEra ShelleyCertState where
   translateEra ctxt ls =
     pure
       ShelleyCertState
-        { shelleyCertDState = translateEra' ctxt $ shelleyCertDState ls
-        , shelleyCertPState = translateEra' ctxt $ shelleyCertPState ls
+        { shelleyCertDState = translateEraWithoutError ctxt $ shelleyCertDState ls
+        , shelleyCertPState = translateEraWithoutError ctxt $ shelleyCertPState ls
         }
 
 instance TranslateEra MaryEra LedgerState where
   translateEra ctxt ls =
     return
       LedgerState
-        { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
-        , lsCertState = translateEra' ctxt $ lsCertState ls
+        { lsUTxOState = translateEraWithoutError ctxt $ lsUTxOState ls
+        , lsCertState = translateEraWithoutError ctxt $ lsCertState ls
         }
 
 instance TranslateEra MaryEra ProposedPPUpdates where
   translateEra ctxt (ProposedPPUpdates ppup) =
-    return $ ProposedPPUpdates $ Map.map (translateEra' ctxt) ppup
+    return $ ProposedPPUpdates $ Map.map (translateEraWithoutError ctxt) ppup
 
 instance TranslateEra MaryEra ShelleyGovState where
   translateEra ctxt ps =
     return
       ShelleyGovState
-        { sgsCurProposals = translateEra' ctxt $ sgsCurProposals ps
-        , sgsFutureProposals = translateEra' ctxt $ sgsFutureProposals ps
-        , sgsCurPParams = translateEra' ctxt $ sgsCurPParams ps
-        , sgsPrevPParams = translateEra' ctxt $ sgsPrevPParams ps
-        , sgsFuturePParams = translateEra' ctxt $ sgsFuturePParams ps
+        { sgsCurProposals = translateEraWithoutError ctxt $ sgsCurProposals ps
+        , sgsFutureProposals = translateEraWithoutError ctxt $ sgsFutureProposals ps
+        , sgsCurPParams = translateEraWithoutError ctxt $ sgsCurPParams ps
+        , sgsPrevPParams = translateEraWithoutError ctxt $ sgsPrevPParams ps
+        , sgsFuturePParams = translateEraWithoutError ctxt $ sgsFuturePParams ps
         }
 
 instance TranslateEra MaryEra UTxOState where
   translateEra ctxt us =
     return
       UTxOState
-        { utxosUtxo = translateEra' ctxt $ utxosUtxo us
+        { utxosUtxo = translateEraWithoutError ctxt $ utxosUtxo us
         , utxosDeposited = utxosDeposited us
         , utxosFees = utxosFees us
-        , utxosGovState = translateEra' ctxt $ utxosGovState us
-        , utxosInstantStake = translateEra' ctxt $ utxosInstantStake us
+        , utxosGovState = translateEraWithoutError ctxt $ utxosGovState us
+        , utxosInstantStake = translateEraWithoutError ctxt $ utxosInstantStake us
         , utxosDonation = utxosDonation us
         }
 
@@ -157,7 +157,7 @@ instance TranslateEra MaryEra ShelleyTxOut where
 
 instance TranslateEra MaryEra UTxO where
   translateEra ctxt utxo =
-    return $ UTxO (translateEra' ctxt `Map.map` unUTxO utxo)
+    return $ UTxO (translateEraWithoutError ctxt `Map.map` unUTxO utxo)
 
 instance TranslateEra MaryEra ShelleyTxWits where
   type TranslationError MaryEra ShelleyTxWits = DecoderError
@@ -171,4 +171,4 @@ instance TranslateEra MaryEra Timelock where
 
 instance TranslateEra MaryEra AllegraTxAuxData where
   translateEra ctx (AllegraTxAuxData md as) =
-    pure $ AllegraTxAuxData md $ translateEra' ctx <$> as
+    pure $ AllegraTxAuxData md $ translateEraWithoutError ctx <$> as

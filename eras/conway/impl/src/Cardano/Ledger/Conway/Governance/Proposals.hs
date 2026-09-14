@@ -250,7 +250,7 @@ translateProposals ::
   TranslationContext era -> Proposals (PreviousEra era) -> Proposals era
 translateProposals ctxt Proposals {..} =
   Proposals
-    (foldr' (\x -> (translateEra' ctxt x OM.<|)) mempty pProps)
+    (foldr' (\x -> (translateEraWithoutError ctxt x OM.<|)) mempty pProps)
     pRoots
     pGraph
 

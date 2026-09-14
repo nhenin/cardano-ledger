@@ -174,7 +174,7 @@ class
     SimpleGetter (TransitionConfig era) (PParams era)
   tcInitialPParamsG =
     to $ \tc ->
-      translateEra'
+      translateEraWithoutError
         (tc ^. tcTranslationContextL)
         (tc ^. tcPreviousEraConfigL . tcInitialPParamsG)
 

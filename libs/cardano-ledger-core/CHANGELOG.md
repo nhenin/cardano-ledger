@@ -2,6 +2,8 @@
 
 ## 1.22.0.0
 
+* Rename `translateEra'` to `translateEraWithoutError`, preserving its type
+  signature and behavior.
 * Add `CapacityDeposit` in `Cardano.Ledger.TxOut.CapacityDeposit`, retaining the
   representation and instances previously defined in the Dijkstra package.
 * Make `upgradeTxOut` accept `PParams (PreviousEra era)` so each era can
