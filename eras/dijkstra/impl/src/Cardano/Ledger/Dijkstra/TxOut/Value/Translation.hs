@@ -5,6 +5,7 @@
 -- either the era's minimum-coin policy or an explicitly supplied allocation.
 module Cardano.Ledger.Dijkstra.TxOut.Value.Translation (
   AllocationError (..),
+  recoverOutputAllocation,
   fromMaryOutputValue,
   requiredCapacityDeposit,
   fromMaryValue,
@@ -12,12 +13,13 @@ module Cardano.Ledger.Dijkstra.TxOut.Value.Translation (
 ) where
 
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (EraTxOut (..), PParams, Value)
+import Cardano.Ledger.Core (EraTxOut (..), PParams, RecoverCapacityDeposit, Value)
 import Cardano.Ledger.Dijkstra.TxOut.ApplicationAssets (ApplicationAssets (..), nativeAssets)
 import Cardano.Ledger.Dijkstra.TxOut.CapacityDeposit (CapacityDeposit (..))
 import Cardano.Ledger.Dijkstra.TxOut.Value (OutputValue (..), outputCoins)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Lens.Micro ((^.))
+import Lens.Micro.Extras (view)
 
 -- | Failure to fund the caller's capacity allocation from the source output.
 data AllocationError
@@ -25,6 +27,17 @@ data AllocationError
   | -- | Available output ADA and the requested deposit, respectively.
     CapacityDepositExceedsOutputCoins !Coin !CapacityDeposit
   deriving (Eq, Show)
+
+-- | Recover the allocation between capacity deposit and application assets from
+-- an output's merged value, using the supplied deposit-recovery policy.
+-- Reject a negative deposit or one exceeding the output's total ADA.
+recoverOutputAllocation ::
+  (EraTxOut era, Value era ~ MaryValue) =>
+  RecoverCapacityDeposit era ->
+  TxOut era ->
+  Either AllocationError OutputValue
+recoverOutputAllocation recoverCapacityDeposit =
+  fromMaryValue . recoverCapacityDeposit <*> view valueTxOutL
 
 -- | Allocate the era's minimum coin requirement to the capacity deposit.
 -- The policy uses the supplied protocol parameters and the complete source

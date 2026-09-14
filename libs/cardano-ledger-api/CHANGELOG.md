@@ -2,6 +2,10 @@
 
 ## 1.15.0.0
 
+* Re-export `upgradeTxOut` with its source `PParams (PreviousEra era)` argument
+  and the `RecoverCapacityDeposit` alias for conversions with an injected policy.
+  Transaction upgrades through Conway use the existing structural conversions
+  without protocol parameters; their behavior is unchanged
 * Remove `mintTxBodyL`, `mintedTxBodyF`, and `mintValueTxBodyF` from `Cardano.Ledger.Api.Tx.Body`; use the typed forging API
 * Rename `AnyEraTxBody.mintTxBodyG` to `forgingTxBodyG` and change its result from `Maybe MultiAsset` to `Maybe Forging`; it remains `Nothing` before Mary and `Just` for supported eras, including empty declarations
 * Require `cardano-ledger-mary >=1.12`; public interfaces use the native-asset types from their new Mary modules

@@ -60,8 +60,8 @@ import Cardano.Ledger.BaseTypes (Nonce)
 import Cardano.Ledger.Block (Block, EraBlockHeader)
 import Cardano.Ledger.Conway.Core
 import qualified Cardano.Ledger.Conway.Rules as Conway
+import Cardano.Ledger.Dijkstra.TxOut.ApplicationAssets (ApplicationAssets)
 import Cardano.Ledger.Internal.Era (DijkstraEra)
-import Cardano.Ledger.Mary (MaryValue)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Lens.Micro
 
@@ -112,7 +112,7 @@ type instance EraRuleEvent "DELEGS" DijkstraEra = VoidEraRule "DELEGS" DijkstraE
 -- Era Mapping
 -------------------------------------------------------------------------------
 
-type instance Value DijkstraEra = MaryValue
+type instance Value DijkstraEra = ApplicationAssets
 
 data SUBLEDGERS era
 

@@ -114,7 +114,7 @@ spec = describe "OutputValue translation" $ do
       )
         `shouldBe` Right (maryValueCoins Fixture.fundedMaryValue)
 
-    it "also derives the deposit from a Conway output and its era policy" $
+    it "derives the deposit from a Conway output and its era policy" $
       (capacityDeposit <$> fromMaryOutputValue (Fixture.pricedPParams 4310) Fixture.conwayOutput)
         `shouldBe` Right (Fixture.capacityDepositAtPrice 4310 Fixture.conwayOutput)
 

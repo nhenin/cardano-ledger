@@ -2,6 +2,9 @@
 
 ## 1.10.1.0
 
+* Export `upgradeShelleyTxOut` for the existing structural conversion and use it
+  in era translation; `upgradeTxOut` accepts but ignores the source protocol
+  parameters, preserving historical behavior
 * Add `EncCBOR`, `ToCBOR` for `Block`
 * Add `DecCBOR` instances for `Annotator Block`
 

@@ -2,6 +2,8 @@
 
 ## 1.20.0.0
 
+* Accept source protocol parameters in `upgradeTxOut`; the unsupported
+  Byron-to-Shelley conversion remains unchanged
 * Require `TxOutAllocation era ~ Value era` for `genesisUTxO`,
   `registerInitialFunds`, `injectInitialFundsAndStaking`, and
   `shelleyRegisterInitialFundsThenStaking`, which construct outputs from values

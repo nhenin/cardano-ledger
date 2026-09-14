@@ -33,6 +33,7 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.Tx ()
+import Cardano.Ledger.Conway.TxOut (upgradeBabbageTxOut)
 import Cardano.Ledger.Shelley.API (
   EpochState (..),
   NewEpochState (..),
@@ -191,4 +192,4 @@ instance TranslateEra ConwayEra UTxOState where
 
 instance TranslateEra ConwayEra API.UTxO where
   translateEra _ctxt utxo =
-    pure $ API.UTxO $ upgradeTxOut `Map.map` API.unUTxO utxo
+    pure $ API.UTxO $ upgradeBabbageTxOut `Map.map` API.unUTxO utxo

@@ -38,7 +38,7 @@ instance EraTxOut ConwayEra where
 
   mkBasicTxOut addr vl = BabbageTxOut addr vl NoDatum SNothing
 
-  upgradeTxOut = upgradeBabbageTxOut
+  upgradeTxOut _ = upgradeBabbageTxOut
 
   addrEitherTxOutL = addrEitherBabbageTxOutL
   {-# INLINE addrEitherTxOutL #-}

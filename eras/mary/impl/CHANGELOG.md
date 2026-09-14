@@ -2,6 +2,9 @@
 
 ## 1.12.0.0
 
+* Export `upgradeAllegraTxOut` for the existing structural conversion and use it
+  in era translation; `upgradeTxOut` accepts but ignores the source protocol
+  parameters, preserving historical behavior
 * Replace `MaryEraTxBody.mintTxBodyL` with `forgingTxBodyL`, whose target is `Forging`; era instances must implement the typed lens. Raw transaction fields and CBOR encoding remain unchanged
 * Remove `mintedTxBodyF`; use the standalone `forgingPoliciesTxBodyF` for policies involved in either minting or burning
 * Remove `mintValueTxBodyF`; use `forgingTxBodyL` for signed quantities, or `mintedAssetsTxBodyF` / `burnedAssetsTxBodyF` for positive accounting magnitudes

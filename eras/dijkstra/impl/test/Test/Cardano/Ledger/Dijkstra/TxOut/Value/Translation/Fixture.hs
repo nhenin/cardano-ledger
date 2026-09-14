@@ -27,14 +27,13 @@ module Test.Cardano.Ledger.Dijkstra.TxOut.Value.Translation.Fixture (
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Babbage.PParams (BabbageEraPParams, ppCoinsPerUTxOByteL)
+import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (BabbageTxOut))
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Binary (serialize)
 import Cardano.Ledger.Coin (Coin (..), CoinPerByte (..), CompactForm (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core (EraTxOut (..), PParams, coinTxOutL, emptyPParams, eraProtVerLow)
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Dijkstra ()
-import Cardano.Ledger.Dijkstra.TxOut (DijkstraTxOut (..))
 import Cardano.Ledger.Dijkstra.TxOut.ApplicationAssets (ApplicationAssets (..))
 import Cardano.Ledger.Dijkstra.TxOut.CapacityDeposit (CapacityDeposit (..))
 import Cardano.Ledger.Dijkstra.TxOut.Value (OutputValue (..))
@@ -140,7 +139,7 @@ nativeScenarios =
 pricedPParams :: BabbageEraPParams era => Word64 -> PParams era
 pricedPParams price = emptyPParams & ppCoinsPerUTxOByteL .~ CoinPerByte (CompactCoin price)
 
--- Independent expectation for the current Dijkstra and Conway pricing rule.
+-- Independent expectation for the Conway source output's pricing rule.
 capacityDepositAtPrice :: forall era. EraTxOut era => Word64 -> TxOut era -> CapacityDeposit
 capacityDepositAtPrice price txOut =
   CapacityDeposit $ Coin $ toInteger price * (160 + toInteger (LBS.length encodedOutput))
@@ -156,7 +155,7 @@ fundedMaryValue =
 baseAddress :: Addr
 baseAddress = Addr Testnet (KeyHashObj (mkKeyHash 1)) (StakeRefBase (KeyHashObj (mkKeyHash 2)))
 
-fundedOutput :: DijkstraTxOut
+fundedOutput :: TxOut ConwayEra
 fundedOutput = mkBasicTxOut baseAddress fundedMaryValue
 
 fundedApplicationCoins :: Coin
@@ -165,7 +164,7 @@ fundedApplicationCoins =
       CapacityDeposit (Coin deposit) = capacityDepositAtPrice 4310 fundedOutput
    in Coin (total - deposit)
 
-outputSizeScenarios :: [(String, DijkstraTxOut)]
+outputSizeScenarios :: [(String, TxOut ConwayEra)]
 outputSizeScenarios =
   [ ("a base address", fundedOutput)
   ,
@@ -174,21 +173,21 @@ outputSizeScenarios =
     )
   ,
     ( "an inline datum"
-    , DijkstraTxOut baseAddress fundedMaryValue (Datum (dataToBinaryData exampleDatum)) SNothing
+    , BabbageTxOut baseAddress fundedMaryValue (Datum (dataToBinaryData exampleDatum)) SNothing
     )
   ,
     ( "a reference script"
-    , DijkstraTxOut baseAddress fundedMaryValue NoDatum (SJust (alwaysSucceeds @'PlutusV1 0))
+    , BabbageTxOut baseAddress fundedMaryValue NoDatum (SJust (alwaysSucceeds @'PlutusV1 0))
     )
   ]
 
 -- Both the funded total and its deposit use five-byte CBOR coin encodings,
 -- so these boundary amounts leave the output size unchanged.
-exactlyFundedOutput :: DijkstraTxOut
+exactlyFundedOutput :: TxOut ConwayEra
 exactlyFundedOutput =
   fundedOutput & coinTxOutL .~ unCapacityDeposit (capacityDepositAtPrice 4310 fundedOutput)
 
-underfundedOutput :: DijkstraTxOut
+underfundedOutput :: TxOut ConwayEra
 underfundedOutput =
   let CapacityDeposit (Coin deposit) = capacityDepositAtPrice 4310 fundedOutput
    in fundedOutput & coinTxOutL .~ Coin (deposit - 1)

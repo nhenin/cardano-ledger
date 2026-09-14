@@ -33,6 +33,7 @@ module Cardano.Ledger.Core (
   EraTx (..),
   txIdTx,
   EraTxOut (..),
+  RecoverCapacityDeposit,
   bootAddrTxOutF,
   coinTxOutL,
   compactCoinTxOutL,

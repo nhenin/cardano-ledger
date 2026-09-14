@@ -2,6 +2,9 @@
 
 ## 1.17.0.0
 
+* Export `upgradeMaryTxOut` for the existing structural conversion and use it
+  in era translation; `upgradeTxOut` accepts but ignores the source protocol
+  parameters, preserving historical behavior
 * Remove re-exported `mintTxBodyL`, `mintedTxBodyF`, and `mintValueTxBodyF`; use the typed forging API from `Cardano.Ledger.Mary.Core`
 * Require `cardano-ledger-mary >=1.12` for the new native-asset modules and their types' defining-module metadata
 * Remove the following exports from `Cardano.Ledger.Alonzo.Plutus.TxInfo`; use their replacements:

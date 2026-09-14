@@ -50,6 +50,8 @@ library
     Cardano.Ledger.Dijkstra.TxOut
     Cardano.Ledger.Dijkstra.TxOut.ApplicationAssets
     Cardano.Ledger.Dijkstra.TxOut.CapacityDeposit
+    Cardano.Ledger.Dijkstra.TxOut.LedgerInstances
+    Cardano.Ledger.Dijkstra.TxOut.Translation
     Cardano.Ledger.Dijkstra.TxOut.Value
     Cardano.Ledger.Dijkstra.TxOut.Value.Translation
     Cardano.Ledger.Dijkstra.TxWits
@@ -86,6 +88,7 @@ library
     Cardano.Ledger.Dijkstra.State.CertState
     Cardano.Ledger.Dijkstra.State.Stake
     Cardano.Ledger.Dijkstra.Translation
+    Cardano.Ledger.Dijkstra.TxOut.Codec
 
   hs-source-dirs: src
   default-language: Haskell2010
@@ -272,10 +275,16 @@ test-suite tests
     Test.Cardano.Ledger.Dijkstra.Binary.CddlSpec
     Test.Cardano.Ledger.Dijkstra.GoldenSpec
     Test.Cardano.Ledger.Dijkstra.Plutus.PlutusSpec
+    Test.Cardano.Ledger.Dijkstra.TxOut.Allocation.Fixture
+    Test.Cardano.Ledger.Dijkstra.TxOut.AllocationSpec
     Test.Cardano.Ledger.Dijkstra.TxOut.ApplicationAssets.Fixture
     Test.Cardano.Ledger.Dijkstra.TxOut.ApplicationAssetsSpec
     Test.Cardano.Ledger.Dijkstra.TxOut.Compatibility.Fixture
     Test.Cardano.Ledger.Dijkstra.TxOut.Compatibility.Spec
+    Test.Cardano.Ledger.Dijkstra.TxOut.Encoding.Fixture
+    Test.Cardano.Ledger.Dijkstra.TxOut.EncodingSpec
+    Test.Cardano.Ledger.Dijkstra.TxOut.Upgrade.Fixture
+    Test.Cardano.Ledger.Dijkstra.TxOut.UpgradeSpec
     Test.Cardano.Ledger.Dijkstra.TxOut.Value.Fixture
     Test.Cardano.Ledger.Dijkstra.TxOut.Value.Translation.Fixture
     Test.Cardano.Ledger.Dijkstra.TxOut.Value.TranslationSpec

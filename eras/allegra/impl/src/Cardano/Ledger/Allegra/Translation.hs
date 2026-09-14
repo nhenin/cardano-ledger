@@ -15,6 +15,7 @@ module Cardano.Ledger.Allegra.Translation (shelleyToAllegraAVVMsToDelete) where
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.State
 import Cardano.Ledger.Allegra.Tx ()
+import Cardano.Ledger.Allegra.TxOut (upgradeShelleyTxOut)
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -105,7 +106,7 @@ instance TranslateEra AllegraEra ShelleyGovState where
         }
 
 instance TranslateEra AllegraEra ShelleyTxOut where
-  translateEra NoGenesis = pure . upgradeTxOut
+  translateEra NoGenesis = pure . upgradeShelleyTxOut
 
 instance TranslateEra AllegraEra UTxO where
   translateEra ctxt utxo =

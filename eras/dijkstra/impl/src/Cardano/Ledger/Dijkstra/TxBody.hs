@@ -128,7 +128,7 @@ import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts (AccountBalanceIntervals (..), DijkstraPlutusPurpose (..))
-import Cardano.Ledger.Dijkstra.TxOut ()
+import Cardano.Ledger.Dijkstra.TxOut.LedgerInstances ()
 import Cardano.Ledger.Keys (HasKeyRole (..))
 import Cardano.Ledger.Mary.Value (MultiAsset)
 import Cardano.Ledger.MemoBytes (

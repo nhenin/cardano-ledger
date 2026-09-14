@@ -4,12 +4,11 @@
 
 -- | Transitional monetary component for the Dijkstra output split.
 --
--- The split is present in this first model: the container holds a capacity
--- deposit and application assets. A later step can place those two components
--- directly in the output and remove this container.
+-- The construction container holds a capacity deposit and application assets.
+-- Dijkstra stores those two components directly in its compact output variants.
 --
--- This module introduces the explicit model only. 'OutputValue' is not yet the
--- storage type of @TxOut@, and no era instance is changed.
+-- 'OutputValue' is the construction allocation for @TxOut DijkstraEra@; the
+-- era's 'ApplicationAssets' remain independently accessible as its value.
 -- Allocation, output encoding, historical-output translation and script-facing
 -- projections must be specified at their integration boundaries. Collapsing the
 -- components into a @MaryValue@ would lose the split.

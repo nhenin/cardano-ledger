@@ -23,6 +23,7 @@ import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON)
 import Data.Group (Abelian, Group)
+import Data.MemPack (MemPack (..))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 
@@ -64,3 +65,8 @@ instance Compactible ApplicationAssets where
     deriving newtype (NoThunks, EncCBOR, DecCBOR)
   toCompact (ApplicationAssets assets) = CompactApplicationAssets <$> toCompact assets
   fromCompact (CompactApplicationAssets assets) = ApplicationAssets (fromCompact assets)
+
+instance MemPack (CompactForm ApplicationAssets) where
+  packedByteCount (CompactApplicationAssets assets) = packedByteCount assets
+  packM (CompactApplicationAssets assets) = packM assets
+  unpackM = CompactApplicationAssets <$> unpackM

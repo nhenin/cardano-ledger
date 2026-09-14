@@ -29,8 +29,11 @@ import qualified Test.Cardano.Ledger.Dijkstra.Imp as Imp
 import Test.Cardano.Ledger.Dijkstra.ImpTest ()
 import qualified Test.Cardano.Ledger.Dijkstra.Plutus.PlutusSpec as PlutusSpec
 import qualified Test.Cardano.Ledger.Dijkstra.TxInfoSpec as DijkstraTxInfoSpec
+import qualified Test.Cardano.Ledger.Dijkstra.TxOut.AllocationSpec as OutputAllocationSpec
 import qualified Test.Cardano.Ledger.Dijkstra.TxOut.ApplicationAssetsSpec as ApplicationAssetsSpec
 import qualified Test.Cardano.Ledger.Dijkstra.TxOut.Compatibility.Spec as OutputCompatibilitySpec
+import qualified Test.Cardano.Ledger.Dijkstra.TxOut.EncodingSpec as OutputEncodingSpec
+import qualified Test.Cardano.Ledger.Dijkstra.TxOut.UpgradeSpec as OutputUpgradeSpec
 import qualified Test.Cardano.Ledger.Dijkstra.TxOut.Value.TranslationSpec as OutputValueTranslationSpec
 import qualified Test.Cardano.Ledger.Dijkstra.TxOut.ValueSpec as OutputValueSpec
 import Test.Cardano.Ledger.Era
@@ -42,8 +45,11 @@ instance EraSpec DijkstraEra where
 main :: IO ()
 main =
   ledgerEraTestMain @DijkstraEra $ do
+    OutputAllocationSpec.spec
     ApplicationAssetsSpec.spec
     OutputCompatibilitySpec.spec
+    OutputEncodingSpec.spec
+    OutputUpgradeSpec.spec
     OutputValueSpec.spec
     OutputValueTranslationSpec.spec
     describe "RoundTrip" $ do

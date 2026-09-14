@@ -20,6 +20,7 @@ import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Scripts (Timelock, translateTimelock)
 import Cardano.Ledger.Mary.State
 import Cardano.Ledger.Mary.TxAuxData (AllegraTxAuxData (..))
+import Cardano.Ledger.Mary.TxOut (upgradeAllegraTxOut)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   LedgerState (..),
@@ -152,7 +153,7 @@ instance TranslateEra MaryEra ShelleyInstantStake where
   translateEra _ = pure . coerce
 
 instance TranslateEra MaryEra ShelleyTxOut where
-  translateEra NoGenesis = pure . upgradeTxOut
+  translateEra NoGenesis = pure . upgradeAllegraTxOut
 
 instance TranslateEra MaryEra UTxO where
   translateEra ctxt utxo =

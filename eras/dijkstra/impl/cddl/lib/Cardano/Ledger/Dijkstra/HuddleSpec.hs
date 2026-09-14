@@ -790,13 +790,14 @@ instance HuddleRule "babbage_transaction_output" DijkstraEra where
 
 instance HuddleRule "transaction_output" DijkstraEra where
   huddleRuleNamed pname p =
-    comment
-      [str| Both of the Alonzo and Babbage style TxOut formats are equally valid
-          | and can be used interchangeably
-          |]
-      $ pname
-        =.= huddleRule @"alonzo_transaction_output" p
-        / huddleRule @"babbage_transaction_output" p
+    pname
+      =.= mp
+        [ idx 0 ==> huddleRule @"address" p
+        , idx 1 ==> huddleRule @"value" p //- "application assets"
+        , opt $ idx 2 ==> huddleRule @"datum_option" p
+        , opt $ idx 3 ==> huddleRule @"script_ref" p
+        , idx 4 ==> huddleRule @"coin" p //- "capacity deposit"
+        ]
 
 instance HuddleRule "sub_transaction_body" DijkstraEra where
   huddleRuleNamed = subTransactionBodyRule

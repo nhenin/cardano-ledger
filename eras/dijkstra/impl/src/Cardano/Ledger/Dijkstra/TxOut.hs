@@ -2,73 +2,91 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
+-- | Represent Dijkstra outputs with separate capacity deposits and application assets.
+-- Import "Cardano.Ledger.Dijkstra.TxOut.LedgerInstances" to use the Ledger output interfaces.
 module Cardano.Ledger.Dijkstra.TxOut (
+  -- * Dijkstra output representation and projections
   DijkstraTxOut (DijkstraTxOut),
+  capacityDepositTxOutF,
   fromBabbageTxOut,
   toBabbageTxOut,
 ) where
 
 import Cardano.Ledger.Address (Addr, CompactAddr)
-import Cardano.Ledger.Alonzo.Core (AlonzoEraTxOut (..))
 import Cardano.Ledger.Alonzo.TxBody (Addr28Extra, DataHash32)
-import Cardano.Ledger.Babbage.TxOut (BabbageEraTxOut (..))
 import qualified Cardano.Ledger.Babbage.TxOut as Babbage
-import Cardano.Ledger.Binary (DecCBOR (..), DecShareCBOR (..), EncCBOR (..), Interns)
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  DecShareCBOR (..),
+  EncCBOR (..),
+  Interns,
+  TokenType (..),
+  decodeMemPack,
+  interns,
+  peekTokenType,
+ )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (CompactForm)
-import Cardano.Ledger.Conway.TxBody (upgradeBabbageTxOut)
-import Cardano.Ledger.Core (EraTxOut (..), Script, Value)
+import Cardano.Ledger.Core (Script)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.Scripts ()
+import Cardano.Ledger.Dijkstra.TxOut.ApplicationAssets (ApplicationAssets)
+import Cardano.Ledger.Dijkstra.TxOut.CapacityDeposit (CapacityDeposit)
+import Cardano.Ledger.Dijkstra.TxOut.Codec (decodeDijkstraTxOut, encodeDijkstraTxOut)
+import Cardano.Ledger.Dijkstra.TxOut.Value (OutputValue (..))
 import Cardano.Ledger.Hashes (DataHash, KeyRole (Staking))
 import Cardano.Ledger.Plutus (BinaryData, Datum (..))
 import Control.DeepSeq (NFData (rnf), rwhnf)
-import Data.Aeson (ToJSON (..))
+import Data.Aeson (ToJSON (..), object, (.=))
 import Data.Maybe.Strict (StrictMaybe (..))
-import Data.MemPack (MemPack (..))
+import Data.MemPack (MemPack (..), packTagM, packedTagByteCount, unknownTagM, unpackTagM)
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
-import Lens.Micro (Lens', lens, to)
+import Lens.Micro (SimpleGetter, to, (^.))
 import NoThunks.Class (NoThunks)
 
--- | Dijkstra owns its output representation. The value still contains the
--- complete holdings; capacity and application allocations are not split yet.
---
--- Keep the existing compact alternatives and their order in this first step:
--- this preserves address sharing, equality and ordering as well as the compact
--- ADA-only storage. The public pattern exposes the four logical components.
+-- | Store the supplied capacity deposit separately from application assets.
+-- The existing compact alternatives retain address sharing and ADA-only storage.
+-- The public pattern presents both monetary components as an 'OutputValue'.
 data DijkstraTxOut
   = TxOutCompact'
       {-# UNPACK #-} !CompactAddr
-      !(CompactForm (Value DijkstraEra))
+      !CapacityDeposit
+      !(CompactForm ApplicationAssets)
   | TxOutCompactDH'
       {-# UNPACK #-} !CompactAddr
-      !(CompactForm (Value DijkstraEra))
+      !CapacityDeposit
+      !(CompactForm ApplicationAssets)
       !DataHash
   | TxOutCompactDatum
       {-# UNPACK #-} !CompactAddr
-      !(CompactForm (Value DijkstraEra))
+      !CapacityDeposit
+      !(CompactForm ApplicationAssets)
       {-# UNPACK #-} !(BinaryData DijkstraEra) -- Inline data
   | TxOutCompactRefScript
       {-# UNPACK #-} !CompactAddr
-      !(CompactForm (Value DijkstraEra))
+      !CapacityDeposit
+      !(CompactForm ApplicationAssets)
       !(Datum DijkstraEra)
       !(Script DijkstraEra)
   | TxOut_AddrHash28_AdaOnly
       !(Credential Staking)
       {-# UNPACK #-} !Addr28Extra
-      {-# UNPACK #-} !(CompactForm Coin) -- Ada value
+      !CapacityDeposit
+      {-# UNPACK #-} !(CompactForm Coin) -- Application ADA
   | TxOut_AddrHash28_AdaOnly_DataHash32
       !(Credential Staking)
       {-# UNPACK #-} !Addr28Extra
-      {-# UNPACK #-} !(CompactForm Coin) -- Ada value
+      !CapacityDeposit
+      {-# UNPACK #-} !(CompactForm Coin) -- Application ADA
       {-# UNPACK #-} !DataHash32
   deriving stock (Eq, Ord, Generic)
 
@@ -78,103 +96,124 @@ instance NFData DijkstraTxOut where
 instance NoThunks DijkstraTxOut
 
 instance Show DijkstraTxOut where
-  show = show . toBabbageTxOut
+  showsPrec precedence (DijkstraTxOut addr allocation datum script) =
+    showParen (precedence > 10) $
+      showString "DijkstraTxOut "
+        . showsPrec 11 addr
+        . showChar ' '
+        . showsPrec 11 allocation
+        . showChar ' '
+        . showsPrec 11 datum
+        . showChar ' '
+        . showsPrec 11 script
 
 instance ToJSON DijkstraTxOut where
-  toJSON = toJSON . toBabbageTxOut
-  toEncoding = toEncoding . toBabbageTxOut
+  toJSON (DijkstraTxOut addr (OutputValue deposit assets) datum script) =
+    object
+      [ "address" .= addr
+      , "capacityDeposit" .= deposit
+      , "applicationAssets" .= assets
+      , "datum" .= datum
+      , "referenceScript" .= script
+      ]
 
--- | Preserve the current wire format and its accepted legacy output forms.
 instance EncCBOR DijkstraTxOut where
-  encCBOR = encCBOR . toBabbageTxOut
+  encCBOR (DijkstraTxOut addr allocation datum script) =
+    encodeDijkstraTxOut addr allocation datum script
 
 instance DecCBOR DijkstraTxOut where
-  decCBOR = fromBabbageTxOut <$> decCBOR
+  decCBOR = do
+    (addr, allocation, datum, script) <- decodeDijkstraTxOut
+    pure $ DijkstraTxOut addr allocation datum script
 
+-- | Tag 6 distinguishes allocated outputs from the legacy tags 0 through 5.
+-- The application payload retains its exact compact storage variant.
 instance MemPack DijkstraTxOut where
-  packedByteCount = packedByteCount . toBabbageTxOut
-  packM = packM . toBabbageTxOut
-  unpackM = fromBabbageTxOut <$> unpackM
+  packedByteCount txOut =
+    packedTagByteCount
+      + packedByteCount (txOut ^. capacityDepositTxOutF)
+      + packedByteCount (toBabbageTxOut txOut)
+  packM txOut = do
+    packTagM 6
+    packM (txOut ^. capacityDepositTxOutF)
+    packM (toBabbageTxOut txOut)
+  unpackM =
+    unpackTagM >>= \case
+      6 -> fromBabbageTxOut <$> unpackM <*> unpackM
+      tag -> unknownTagM @DijkstraTxOut tag
 
 instance DecShareCBOR DijkstraTxOut where
   type Share DijkstraTxOut = Interns (Credential Staking)
   decShareCBOR credentials = do
-    old <- decShareCBOR credentials
-    pure $! fromBabbageTxOut old
+    txOut <-
+      peekTokenType >>= \case
+        TypeBytes -> decodeMemPack
+        TypeBytesIndef -> decodeMemPack
+        _ -> decCBOR
+    pure $!
+      fromBabbageTxOut
+        (txOut ^. capacityDepositTxOutF)
+        (Babbage.internBabbageTxOut (interns credentials) (toBabbageTxOut txOut))
 
--- | Construct and inspect the same four components as the previous output.
--- The value is the complete output value, not an application-only projection.
+-- | Construct and inspect an output with its explicitly supplied allocation.
+-- Construction preserves both components without calculating a deposit.
 pattern DijkstraTxOut ::
   HasCallStack =>
-  Addr -> Value DijkstraEra -> Datum DijkstraEra -> StrictMaybe (Script DijkstraEra) -> DijkstraTxOut
-pattern DijkstraTxOut addr value datum script <-
-  (toBabbageTxOut -> Babbage.BabbageTxOut addr value datum script)
+  Addr -> OutputValue -> Datum DijkstraEra -> StrictMaybe (Script DijkstraEra) -> DijkstraTxOut
+pattern DijkstraTxOut addr allocation datum script <-
+  (viewDijkstraTxOut -> (addr, allocation, datum, script))
   where
-    DijkstraTxOut addr value datum script =
-      fromBabbageTxOut (Babbage.BabbageTxOut addr value datum script)
+    DijkstraTxOut addr (OutputValue deposit assets) datum script =
+      fromBabbageTxOut deposit (Babbage.BabbageTxOut addr assets datum script)
 
 {-# COMPLETE DijkstraTxOut #-}
 
--- | Copy the representation without normalizing values or addresses. These
--- inverse mappings let Dijkstra reuse the existing codecs and field operations
--- while owning its storage. They do not allocate a capacity deposit.
-fromBabbageTxOut :: Babbage.BabbageTxOut DijkstraEra -> DijkstraTxOut
-fromBabbageTxOut = \case
-  Babbage.TxOutCompact' addr value -> TxOutCompact' addr value
-  Babbage.TxOutCompactDH' addr value datumHash -> TxOutCompactDH' addr value datumHash
-  Babbage.TxOutCompactDatum addr value datum -> TxOutCompactDatum addr value datum
-  Babbage.TxOutCompactRefScript addr value datum script -> TxOutCompactRefScript addr value datum script
+-- | Read the allocation stored in the output, independently of pricing rules.
+capacityDepositTxOutF :: SimpleGetter DijkstraTxOut CapacityDeposit
+capacityDepositTxOutF = to $ \case
+  TxOutCompact' _ deposit _ -> deposit
+  TxOutCompactDH' _ deposit _ _ -> deposit
+  TxOutCompactDatum _ deposit _ _ -> deposit
+  TxOutCompactRefScript _ deposit _ _ _ -> deposit
+  TxOut_AddrHash28_AdaOnly _ _ deposit _ -> deposit
+  TxOut_AddrHash28_AdaOnly_DataHash32 _ _ deposit _ _ -> deposit
+{-# INLINE capacityDepositTxOutF #-}
+
+-- | Attach an explicit deposit to a Babbage-shaped application projection.
+-- Copy compact storage without normalizing assets or addresses. Since its value
+-- is 'ApplicationAssets', the input does not represent an unsplit legacy output.
+fromBabbageTxOut :: CapacityDeposit -> Babbage.BabbageTxOut DijkstraEra -> DijkstraTxOut
+fromBabbageTxOut deposit = \case
+  Babbage.TxOutCompact' addr assets -> TxOutCompact' addr deposit assets
+  Babbage.TxOutCompactDH' addr assets datumHash -> TxOutCompactDH' addr deposit assets datumHash
+  Babbage.TxOutCompactDatum addr assets datum -> TxOutCompactDatum addr deposit assets datum
+  Babbage.TxOutCompactRefScript addr assets datum script -> TxOutCompactRefScript addr deposit assets datum script
   Babbage.TxOut_AddrHash28_AdaOnly credential address coin ->
-    TxOut_AddrHash28_AdaOnly credential address coin
+    TxOut_AddrHash28_AdaOnly credential address deposit coin
   Babbage.TxOut_AddrHash28_AdaOnly_DataHash32 credential address coin datumHash ->
-    TxOut_AddrHash28_AdaOnly_DataHash32 credential address coin datumHash
+    TxOut_AddrHash28_AdaOnly_DataHash32 credential address deposit coin datumHash
 {-# INLINE fromBabbageTxOut #-}
 
--- | Recover the previous representation exactly, including compact alternatives.
+-- | Project application assets and the other output fields into Babbage-shaped
+-- storage. This omits the capacity deposit and is not a whole-output encoding.
 toBabbageTxOut :: DijkstraTxOut -> Babbage.BabbageTxOut DijkstraEra
 toBabbageTxOut = \case
-  TxOutCompact' addr value -> Babbage.TxOutCompact' addr value
-  TxOutCompactDH' addr value datumHash -> Babbage.TxOutCompactDH' addr value datumHash
-  TxOutCompactDatum addr value datum -> Babbage.TxOutCompactDatum addr value datum
-  TxOutCompactRefScript addr value datum script -> Babbage.TxOutCompactRefScript addr value datum script
-  TxOut_AddrHash28_AdaOnly credential address coin ->
+  TxOutCompact' addr _ assets -> Babbage.TxOutCompact' addr assets
+  TxOutCompactDH' addr _ assets datumHash -> Babbage.TxOutCompactDH' addr assets datumHash
+  TxOutCompactDatum addr _ assets datum -> Babbage.TxOutCompactDatum addr assets datum
+  TxOutCompactRefScript addr _ assets datum script -> Babbage.TxOutCompactRefScript addr assets datum script
+  TxOut_AddrHash28_AdaOnly credential address _ coin ->
     Babbage.TxOut_AddrHash28_AdaOnly credential address coin
-  TxOut_AddrHash28_AdaOnly_DataHash32 credential address coin datumHash ->
+  TxOut_AddrHash28_AdaOnly_DataHash32 credential address _ coin datumHash ->
     Babbage.TxOut_AddrHash28_AdaOnly_DataHash32 credential address coin datumHash
 {-# INLINE toBabbageTxOut #-}
 
-babbageTxOutL :: Lens' DijkstraTxOut (Babbage.BabbageTxOut DijkstraEra)
-babbageTxOutL = lens toBabbageTxOut (const fromBabbageTxOut)
-{-# INLINE babbageTxOutL #-}
+-- Private helpers
 
-instance EraTxOut DijkstraEra where
-  type TxOut DijkstraEra = DijkstraTxOut
-
-  mkBasicTxOut addr value = DijkstraTxOut addr value NoDatum SNothing
-
-  upgradeTxOut = fromBabbageTxOut . upgradeBabbageTxOut
-
-  addrEitherTxOutL = babbageTxOutL . Babbage.addrEitherBabbageTxOutL
-  {-# INLINE addrEitherTxOutL #-}
-
-  valueEitherTxOutL = babbageTxOutL . Babbage.valueEitherBabbageTxOutL
-  {-# INLINE valueEitherTxOutL #-}
-
-  getMinCoinSizedTxOut = Babbage.babbageMinUTxOValue
-
-instance AlonzoEraTxOut DijkstraEra where
-  dataHashTxOutL = babbageTxOutL . Babbage.dataHashBabbageTxOutL
-  {-# INLINE dataHashTxOutL #-}
-
-  datumTxOutF = to (Babbage.getDatumBabbageTxOut . toBabbageTxOut)
-  {-# INLINE datumTxOutF #-}
-
-instance BabbageEraTxOut DijkstraEra where
-  dataTxOutL = babbageTxOutL . Babbage.dataBabbageTxOutL
-  {-# INLINE dataTxOutL #-}
-
-  datumTxOutL = babbageTxOutL . Babbage.datumBabbageTxOutL
-  {-# INLINE datumTxOutL #-}
-
-  referenceScriptTxOutL = babbageTxOutL . Babbage.referenceScriptBabbageTxOutL
-  {-# INLINE referenceScriptTxOutL #-}
+viewDijkstraTxOut ::
+  DijkstraTxOut ->
+  (Addr, OutputValue, Datum DijkstraEra, StrictMaybe (Script DijkstraEra))
+viewDijkstraTxOut txOut =
+  case toBabbageTxOut txOut of
+    Babbage.BabbageTxOut addr assets datum script ->
+      (addr, OutputValue (txOut ^. capacityDepositTxOutF) assets, datum, script)

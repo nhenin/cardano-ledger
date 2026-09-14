@@ -17,6 +17,7 @@ import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams ()
 import Cardano.Ledger.Babbage.State
+import Cardano.Ledger.Babbage.TxOut (upgradeAlonzoTxOut)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -150,7 +151,7 @@ instance TranslateEra BabbageEra ShelleyInstantStake where
 
 instance TranslateEra BabbageEra UTxO where
   translateEra _ctxt utxo =
-    pure $ UTxO $ upgradeTxOut `Map.map` unUTxO utxo
+    pure $ UTxO $ upgradeAlonzoTxOut `Map.map` unUTxO utxo
 
 instance TranslateEra BabbageEra ShelleyGovState where
   translateEra ctxt ps =

@@ -79,16 +79,19 @@ import Cardano.Ledger.Allegra.TxBody (
   ValidityInterval (..),
  )
 import qualified Cardano.Ledger.Allegra.TxBody as Allegra (TxBody (..))
+import Cardano.Ledger.Allegra.TxOut (upgradeShelleyTxOut)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (appExtraEntropy), appD)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript, upgradePlutusPurposeAsIx)
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..), AlonzoTxAuxDataRaw (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..), AlonzoTxBodyRaw (..), TxBody (..))
+import Cardano.Ledger.Alonzo.TxOut (upgradeMaryTxOut)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..), unRedeemers)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.PParams (upgradeBabbagePParams)
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBodyRaw (..))
+import Cardano.Ledger.Babbage.TxOut (upgradeAlonzoTxOut)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), isSJust)
 import Cardano.Ledger.Binary (mkSized, unsafeMapSized)
 import Cardano.Ledger.Coin (Coin (..))
@@ -96,6 +99,7 @@ import Cardano.Ledger.Conway (ConwayEra, Tx (..))
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBodyRaw (..), TxBody (..))
 import Cardano.Ledger.Conway.TxCert (ConwayTxCertUpgradeError)
+import Cardano.Ledger.Conway.TxOut (upgradeBabbageTxOut)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Dijkstra (DijkstraEra)
@@ -108,6 +112,7 @@ import Cardano.Ledger.Keys (HasKeyRole (..))
 import Cardano.Ledger.Mary (MaryEra, TxBody (..))
 import Cardano.Ledger.Mary.Forging (Forging (..))
 import Cardano.Ledger.Mary.TxBody (forgingTxBodyL)
+import Cardano.Ledger.Mary.TxOut (upgradeAllegraTxOut)
 import Cardano.Ledger.MemoBytes (getMemoRawType, mkMemoizedEra)
 import Cardano.Ledger.Plutus.Data (upgradeData)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -264,7 +269,7 @@ instance EraApi AllegraEra where
         pure . asSTxTopLevel $
           Allegra.AllegraTxBody
             { Allegra.atbInputs = txBody ^. inputsTxBodyL
-            , Allegra.atbOutputs = upgradeTxOut <$> (txBody ^. outputsTxBodyL)
+            , Allegra.atbOutputs = upgradeShelleyTxOut <$> (txBody ^. outputsTxBodyL)
             , Allegra.atbCerts = certs
             , Allegra.atbWithdrawals = txBody ^. withdrawalsTxBodyL
             , Allegra.atbTxFee = txBody ^. feeTxBodyL
@@ -301,7 +306,7 @@ instance EraApi MaryEra where
         pure $
           MaryTxBody
             { mtbInputs = Allegra.atbInputs atb
-            , mtbOutputs = upgradeTxOut <$> Allegra.atbOutputs atb
+            , mtbOutputs = upgradeAllegraTxOut <$> Allegra.atbOutputs atb
             , mtbCerts = certs
             , mtbWithdrawals = Allegra.atbWithdrawals atb
             , mtbTxFee = Allegra.atbTxFee atb
@@ -366,7 +371,7 @@ instance EraApi AlonzoEra where
             pure $
               AlonzoTxBody
                 { atbInputs = atbrInputs
-                , atbOutputs = upgradeTxOut <$> atbrOutputs
+                , atbOutputs = upgradeMaryTxOut <$> atbrOutputs
                 , atbCerts = certs
                 , atbWithdrawals = atbrWithdrawals
                 , atbTxFee = atbrFee
@@ -483,7 +488,7 @@ instance EraApi BabbageEra where
           BabbageTxBody
             { btbInputs = txBody ^. inputsTxBodyL
             , btbOutputs =
-                mkSized (eraProtVerLow @BabbageEra) . upgradeTxOut <$> (txBody ^. outputsTxBodyL)
+                mkSized (eraProtVerLow @BabbageEra) . upgradeAlonzoTxOut <$> (txBody ^. outputsTxBodyL)
             , btbCerts = certs
             , btbWithdrawals = txBody ^. withdrawalsTxBodyL
             , btbTxFee = txBody ^. feeTxBodyL
@@ -569,7 +574,7 @@ instance EraApi ConwayEra where
         pure $
           ConwayTxBody
             { ctbSpendInputs = btbInputs btb
-            , ctbOutputs = unsafeMapSized upgradeTxOut <$> btbOutputs btb
+            , ctbOutputs = unsafeMapSized upgradeBabbageTxOut <$> btbOutputs btb
             , ctbCerts = certsOSet
             , ctbWithdrawals = btbWithdrawals btb
             , ctbTxfee = btbTxFee btb
@@ -581,7 +586,7 @@ instance EraApi ConwayEra where
             , ctbScriptIntegrityHash = btbScriptIntegrityHash btb
             , ctbTxNetworkId = btbTxNetworkId btb
             , ctbReferenceInputs = btbReferenceInputs btb
-            , ctbCollateralReturn = unsafeMapSized upgradeTxOut <$> btbCollateralReturn btb
+            , ctbCollateralReturn = unsafeMapSized upgradeBabbageTxOut <$> btbCollateralReturn btb
             , ctbTotalCollateral = btbTotalCollateral btb
             , ctbCurrentTreasuryValue = SNothing
             , ctbProposalProcedures = OSet.empty

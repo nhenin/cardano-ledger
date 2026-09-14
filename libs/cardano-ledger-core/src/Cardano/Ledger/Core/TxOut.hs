@@ -10,6 +10,7 @@
 -- | Era-specific output types and their common operations.
 module Cardano.Ledger.Core.TxOut (
   EraTxOut (..),
+  RecoverCapacityDeposit,
   Value,
   bootAddrTxOutF,
   coinTxOutL,
@@ -41,6 +42,7 @@ import Cardano.Ledger.Core.Era (PreviousEra)
 import Cardano.Ledger.Core.PParams (EraPParams, PParams, ppProtocolVersionL)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Hashes (KeyRole (Staking))
+import Cardano.Ledger.TxOut.CapacityDeposit (CapacityDeposit)
 import Cardano.Ledger.Val (Val (..), inject)
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON)
@@ -50,6 +52,11 @@ import Data.MemPack (MemPack)
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
+
+-- | Recover the capacity-deposit portion of an output's merged value.
+-- The function captures the source pricing policy and its protocol parameters,
+-- assuming they still describe the output's original deposit requirement.
+type RecoverCapacityDeposit era = TxOut era -> CapacityDeposit
 
 -- | Abstract interface into specific fields of a `TxOut`
 class
@@ -93,7 +100,13 @@ class
   mkBasicTxOut :: HasCallStack => Addr -> TxOutAllocation era -> TxOut era
 
   -- | Every era, except Shelley, must be able to upgrade a `TxOut` from a previous era.
-  upgradeTxOut :: EraTxOut (PreviousEra era) => TxOut (PreviousEra era) -> TxOut era
+  -- The caller supplies the source era's protocol parameters.
+  -- Eras that only change representation may ignore them.
+  upgradeTxOut ::
+    EraTxOut (PreviousEra era) =>
+    PParams (PreviousEra era) ->
+    TxOut (PreviousEra era) ->
+    TxOut era
 
   valueTxOutL :: Lens' (TxOut era) (Value era)
   valueTxOutL =

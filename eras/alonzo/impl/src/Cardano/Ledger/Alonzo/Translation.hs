@@ -18,6 +18,7 @@ import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.State
+import Cardano.Ledger.Alonzo.TxOut (upgradeMaryTxOut)
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
@@ -151,7 +152,7 @@ instance TranslateEra AlonzoEra ShelleyInstantStake where
 
 instance TranslateEra AlonzoEra UTxO where
   translateEra _ctxt utxo =
-    return $ UTxO $ upgradeTxOut `Map.map` unUTxO utxo
+    return $ UTxO $ upgradeMaryTxOut `Map.map` unUTxO utxo
 
 instance TranslateEra AlonzoEra ShelleyGovState where
   translateEra ctxt ps =
