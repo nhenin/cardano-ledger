@@ -87,6 +87,7 @@ library
     Cardano.Ledger.State
     Cardano.Ledger.Tools
     Cardano.Ledger.TxIn
+    Cardano.Ledger.TxOut.CapacityDeposit
     Cardano.Ledger.Val
 
   hs-source-dirs: src
@@ -96,6 +97,7 @@ library
     Cardano.Ledger.Core.Translation
     Cardano.Ledger.Core.TxCert
     Cardano.Ledger.Core.TxLevel
+    Cardano.Ledger.Core.TxOut
     Cardano.Ledger.Keys.Internal
     Cardano.Ledger.State.Account
     Cardano.Ledger.State.CertState

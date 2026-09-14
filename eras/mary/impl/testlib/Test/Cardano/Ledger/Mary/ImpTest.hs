@@ -41,7 +41,9 @@ class
 
 instance MaryEraImp MaryEra
 
-mkTokenMintingTx :: (MaryEraImp era, Typeable l) => ScriptHash -> ImpTestM era (Tx l era)
+mkTokenMintingTx ::
+  (MaryEraImp era, TxOutAllocation era ~ Value era, Typeable l) =>
+  ScriptHash -> ImpTestM era (Tx l era)
 mkTokenMintingTx sh = do
   name <- arbitrary
   count <- choose (1, 10)

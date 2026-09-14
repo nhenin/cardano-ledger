@@ -33,6 +33,7 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Conway.State
 import Cardano.Ledger.Conway.Tx ()
+import Cardano.Ledger.Conway.TxOut (upgradeBabbageTxOut)
 import Cardano.Ledger.Shelley.API (
   EpochState (..),
   NewEpochState (..),
@@ -68,7 +69,7 @@ type instance TranslationContext ConwayEra = ConwayGenesis
 
 instance TranslateEra ConwayEra NewEpochState where
   translateEra ctxt nes = do
-    let es = translateEra' ctxt $ nesEs nes
+    let es = translateEraWithoutError ctxt $ nesEs nes
         -- We need to ensure that we have the same initial EnactState in the pulser as
         -- well as in the current EnactState, otherwise in the very first EPOCH rule call
         -- the pulser will reset it.
@@ -123,8 +124,8 @@ instance TranslateEra ConwayEra EpochState where
     pure $
       EpochState
         { esChainAccountState = esChainAccountState es
-        , esSnapshots = translateEra' ctxt $ esSnapshots es
-        , esLState = translateEra' ctxt $ esLState es
+        , esSnapshots = translateEraWithoutError ctxt $ esSnapshots es
+        , esLState = translateEraWithoutError ctxt $ esLState es
         , esNonMyopic = esNonMyopic es
         }
 
@@ -149,7 +150,7 @@ instance TranslateEra ConwayEra API.LedgerState where
   translateEra conwayGenesis ls =
     pure
       API.LedgerState
-        { API.lsUTxOState = translateEra' conwayGenesis $ ls ^. lsUTxOStateL
+        { API.lsUTxOState = translateEraWithoutError conwayGenesis $ ls ^. lsUTxOStateL
         , API.lsCertState = translateCertState conwayGenesis $ ls ^. lsCertStateL
         }
 
@@ -159,17 +160,17 @@ translateCertState ::
   API.CertState ConwayEra
 translateCertState ctx scert =
   def
-    & certDStateL .~ translateEra' ctx (scert ^. certDStateL)
-    & certPStateL .~ translateEra' ctx (scert ^. certPStateL)
+    & certDStateL .~ translateEraWithoutError ctx (scert ^. certDStateL)
+    & certPStateL .~ translateEraWithoutError ctx (scert ^. certPStateL)
 
 translateGovState ::
   TranslationContext ConwayEra ->
   GovState BabbageEra ->
   GovState ConwayEra
 translateGovState ctxt@ConwayGenesis {..} sgov =
-  let curPParams = translateEra' ctxt (sgov ^. curPParamsGovStateL)
-      prevPParams = translateEra' ctxt (sgov ^. prevPParamsGovStateL)
-      futurePParams = translateEra' ctxt (sgov ^. futurePParamsGovStateL)
+  let curPParams = translateEraWithoutError ctxt (sgov ^. curPParamsGovStateL)
+      prevPParams = translateEraWithoutError ctxt (sgov ^. prevPParamsGovStateL)
+      futurePParams = translateEraWithoutError ctxt (sgov ^. futurePParamsGovStateL)
    in emptyGovState
         & cgsCurPParamsL .~ curPParams
         & cgsPrevPParamsL .~ prevPParams
@@ -181,7 +182,7 @@ instance TranslateEra ConwayEra UTxOState where
   translateEra ctxt us =
     pure
       UTxOState
-        { API.utxosUtxo = translateEra' ctxt $ API.utxosUtxo us
+        { API.utxosUtxo = translateEraWithoutError ctxt $ API.utxosUtxo us
         , API.utxosDeposited = API.utxosDeposited us
         , API.utxosFees = API.utxosFees us
         , API.utxosGovState = translateGovState ctxt $ API.utxosGovState us
@@ -191,4 +192,4 @@ instance TranslateEra ConwayEra UTxOState where
 
 instance TranslateEra ConwayEra API.UTxO where
   translateEra _ctxt utxo =
-    pure $ API.UTxO $ upgradeTxOut `Map.map` API.unUTxO utxo
+    pure $ API.UTxO $ upgradeBabbageTxOut `Map.map` API.unUTxO utxo

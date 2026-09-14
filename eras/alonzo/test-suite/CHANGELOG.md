@@ -2,6 +2,8 @@
 
 ## 1.4.0.2
 
+* Require `TxOutAllocation era ~ Value era` in the `LEDGER` and `LEDGERS` trace
+  generator instances; generated outputs and trace behavior are unchanged.
 * Require `cardano-ledger-alonzo >=1.17` for the typed forging interface used by transaction generators
 
 ## 1.4.0.1
@@ -73,4 +75,3 @@
 ## 1.1.2.1
 
 *
-

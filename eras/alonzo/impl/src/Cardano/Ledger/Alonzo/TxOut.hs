@@ -32,6 +32,7 @@ module Cardano.Ledger.Alonzo.TxOut (
   viewCompactTxOut,
   viewTxOut,
   getAlonzoTxOutEitherAddr,
+  upgradeMaryTxOut,
   utxoEntrySize,
   internAlonzoTxOut,
 ) where
@@ -71,6 +72,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
+import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Plutus.Data (Datum (..), dataHashSize)
 import Cardano.Ledger.Shelley.Core
 import qualified Cardano.Ledger.Shelley.TxOut as Shelley
@@ -339,7 +341,7 @@ instance EraTxOut AlonzoEra where
 
   mkBasicTxOut addr vl = AlonzoTxOut addr vl SNothing
 
-  upgradeTxOut (Shelley.TxOutCompact addr value) = TxOutCompact' addr value
+  upgradeTxOut _ = upgradeMaryTxOut
 
   addrEitherTxOutL =
     lens
@@ -372,6 +374,10 @@ instance EraTxOut AlonzoEra where
   getMinCoinTxOut pp txOut =
     case pp ^. ppCoinsPerUTxOWordL of
       CoinPerWord (Coin cpw) -> Coin $ utxoEntrySize txOut * cpw
+
+-- | Upgrade a Mary output without adding a datum hash or changing its value.
+upgradeMaryTxOut :: Shelley.ShelleyTxOut MaryEra -> AlonzoTxOut AlonzoEra
+upgradeMaryTxOut (Shelley.TxOutCompact addr value) = TxOutCompact' addr value
 
 instance
   (Era era, Val (Value era)) =>

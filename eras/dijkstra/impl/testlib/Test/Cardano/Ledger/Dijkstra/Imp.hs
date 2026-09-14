@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -20,6 +21,7 @@ import Test.Cardano.Ledger.Dijkstra.ImpTest
 
 spec ::
   ( DijkstraEraImp era
+  , TxOutAllocation era ~ Value era
   , Event (EraRule "EPOCH" era) ~ Conway.ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ Conway.ConwayNewEpochEvent era
   , Event (EraRule "HARDFORK" era) ~ Conway.ConwayHardForkEvent era

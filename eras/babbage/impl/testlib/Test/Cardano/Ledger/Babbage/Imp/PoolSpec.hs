@@ -7,6 +7,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Babbage.Imp.PoolSpec (babbageEraSpecificSpec) where
@@ -31,6 +32,7 @@ babbageEraSpecificSpec ::
   ( BabbageEraImp era
   , ShelleyEraAccounts era
   , Event (EraRule "NEWEPOCH" era) ~ Shelley.ShelleyNewEpochEvent era
+  , TxOutAllocation era ~ Value era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 babbageEraSpecificSpec = describe "POOL" $ do

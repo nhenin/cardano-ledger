@@ -15,6 +15,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -88,7 +89,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Core
+import Cardano.Ledger.Core as Core
 import Cardano.Ledger.Genesis
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.Keys (GenDelegPair (..))
@@ -636,7 +637,7 @@ activeSlotsCoeffDecCBOR = do
 
 genesisUTxO ::
   forall era.
-  EraTxOut era =>
+  (EraTxOut era, TxOutAllocation era ~ Core.Value era) =>
   ShelleyGenesis ->
   UTxO era
 genesisUTxO genesis =

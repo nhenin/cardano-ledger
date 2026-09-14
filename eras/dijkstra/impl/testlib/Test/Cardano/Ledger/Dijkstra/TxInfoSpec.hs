@@ -5,6 +5,8 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Dijkstra.TxInfoSpec (spec) where
 
@@ -72,6 +74,7 @@ spec ::
   , EraTx era
   , Arbitrary (Value era)
   , AlonzoEraTxWits era
+  , TxOutAllocation era ~ Value era
   ) =>
   Spec
 spec = describe "TxInfo" $ do

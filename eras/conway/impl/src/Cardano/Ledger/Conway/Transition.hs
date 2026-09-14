@@ -9,6 +9,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -155,7 +156,12 @@ tcInitialDRepsL =
 instance NoThunks (TransitionConfig ConwayEra)
 
 conwayRegisterInitialFundsThenStaking ::
-  (ConwayEraTransition era, HasCallStack, MonadST m, MonadThrow m) =>
+  ( ConwayEraTransition era
+  , TxOutAllocation era ~ Value era
+  , HasCallStack
+  , MonadST m
+  , MonadThrow m
+  ) =>
   HasFS m h ->
   TransitionConfig era ->
   NewEpochState era ->

@@ -174,7 +174,7 @@ class
     SimpleGetter (TransitionConfig era) (PParams era)
   tcInitialPParamsG =
     to $ \tc ->
-      translateEra'
+      translateEraWithoutError
         (tc ^. tcTranslationContextL)
         (tc ^. tcPreviousEraConfigL . tcInitialPParamsG)
 
@@ -236,7 +236,12 @@ tcNetworkIDG = tcShelleyGenesisL . to sgNetworkId
 -- and Conway have incompatible account representations ('ShelleyEraAccounts'
 -- vs 'ConwayEraAccounts').
 injectInitialFundsAndStaking ::
-  (EraTransition era, HasCallStack, MonadST m, MonadThrow m) =>
+  ( EraTransition era
+  , TxOutAllocation era ~ Value era
+  , HasCallStack
+  , MonadST m
+  , MonadThrow m
+  ) =>
   HasFS m h ->
   ( Network ->
     HasFS m h ->
@@ -304,7 +309,13 @@ injectStakeCredentials network fs source nes = do
       & nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolsL .~ updatedPools
 
 shelleyRegisterInitialFundsThenStaking ::
-  (EraTransition era, ShelleyEraAccounts era, HasCallStack, MonadST m, MonadThrow m) =>
+  ( EraTransition era
+  , TxOutAllocation era ~ Value era
+  , ShelleyEraAccounts era
+  , HasCallStack
+  , MonadST m
+  , MonadThrow m
+  ) =>
   HasFS m h ->
   TransitionConfig era ->
   NewEpochState era ->
@@ -634,6 +645,7 @@ resetStakeDistribution nes =
 registerInitialFunds ::
   forall era m h.
   ( EraTransition era
+  , TxOutAllocation era ~ Value era
   , HasCallStack
   , MonadST m
   , MonadThrow m

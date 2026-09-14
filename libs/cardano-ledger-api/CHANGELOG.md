@@ -2,6 +2,10 @@
 
 ## 1.15.0.0
 
+* Re-export `upgradeTxOut` with its source `PParams (PreviousEra era)` argument
+  and the `RecoverCapacityDeposit` alias for conversions with an injected policy.
+  Transaction upgrades through Conway use the existing structural conversions
+  without protocol parameters; their behavior is unchanged
 * Remove `mintTxBodyL`, `mintedTxBodyF`, and `mintValueTxBodyF` from `Cardano.Ledger.Api.Tx.Body`; use the typed forging API
 * Rename `AnyEraTxBody.mintTxBodyG` to `forgingTxBodyG` and change its result from `Maybe MultiAsset` to `Maybe Forging`; it remains `Nothing` before Mary and `Just` for supported eras, including empty declarations
 * Require `cardano-ledger-mary >=1.12`; public interfaces use the native-asset types from their new Mary modules
@@ -10,6 +14,11 @@
   - `forgingTxBodyL`, `mintedAssetsTxBodyF`, `burnedAssetsTxBodyF`, and `forgingPoliciesTxBodyF`
 * Change result of the the `querySetSnapshotStakePoolDistr` to a stable result types `QueryResultPoolDistr` with `QueryResultIndividualPoolStake`
 * Add `qripsBls` field to `QueryResultIndividualPoolStake`, exposing the pool's registered BLS key to consensus alongside `qripsVrf`. Encoded and decoded only from protocol version 12 (Dijkstra) onwards, so the `GetPoolDistr2` wire format is unchanged in earlier eras
+
+### Tests
+
+* Require `TxOutAllocation era ~ Value era` in the generic query spec whose
+  fixtures construct outputs from a value; query behavior is unchanged.
 
 ## 1.14.0.0
 

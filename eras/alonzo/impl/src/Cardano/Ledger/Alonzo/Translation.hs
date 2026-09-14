@@ -18,6 +18,7 @@ import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.State
+import Cardano.Ledger.Alonzo.TxOut (upgradeMaryTxOut)
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
@@ -55,7 +56,7 @@ instance TranslateEra AlonzoEra NewEpochState where
         { nesEL = nesEL nes
         , nesBprev = nesBprev nes
         , nesBcur = nesBcur nes
-        , nesEs = translateEra' ctxt $ nesEs nes
+        , nesEs = translateEraWithoutError ctxt $ nesEs nes
         , nesRu = nesRu nes
         , nesPd = nesPd nes
         , stashedAVVMAddresses = ()
@@ -99,8 +100,8 @@ instance TranslateEra AlonzoEra EpochState where
     return
       EpochState
         { esChainAccountState = esChainAccountState es
-        , esSnapshots = translateEra' ctxt $ esSnapshots es
-        , esLState = translateEra' ctxt $ esLState es
+        , esSnapshots = translateEraWithoutError ctxt $ esSnapshots es
+        , esLState = translateEraWithoutError ctxt $ esLState es
         , esNonMyopic = esNonMyopic es
         }
 
@@ -122,27 +123,27 @@ instance TranslateEra AlonzoEra ShelleyCertState where
   translateEra ctxt ls =
     pure
       ShelleyCertState
-        { shelleyCertDState = translateEra' ctxt $ shelleyCertDState ls
-        , shelleyCertPState = translateEra' ctxt $ shelleyCertPState ls
+        { shelleyCertDState = translateEraWithoutError ctxt $ shelleyCertDState ls
+        , shelleyCertPState = translateEraWithoutError ctxt $ shelleyCertPState ls
         }
 
 instance TranslateEra AlonzoEra LedgerState where
   translateEra ctxt ls =
     return
       LedgerState
-        { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
-        , lsCertState = translateEra' ctxt $ lsCertState ls
+        { lsUTxOState = translateEraWithoutError ctxt $ lsUTxOState ls
+        , lsCertState = translateEraWithoutError ctxt $ lsCertState ls
         }
 
 instance TranslateEra AlonzoEra UTxOState where
   translateEra ctxt us =
     return
       UTxOState
-        { utxosUtxo = translateEra' ctxt $ utxosUtxo us
+        { utxosUtxo = translateEraWithoutError ctxt $ utxosUtxo us
         , utxosDeposited = utxosDeposited us
         , utxosFees = utxosFees us
-        , utxosGovState = translateEra' ctxt $ utxosGovState us
-        , utxosInstantStake = translateEra' ctxt $ utxosInstantStake us
+        , utxosGovState = translateEraWithoutError ctxt $ utxosGovState us
+        , utxosInstantStake = translateEraWithoutError ctxt $ utxosInstantStake us
         , utxosDonation = utxosDonation us
         }
 
@@ -151,17 +152,17 @@ instance TranslateEra AlonzoEra ShelleyInstantStake where
 
 instance TranslateEra AlonzoEra UTxO where
   translateEra _ctxt utxo =
-    return $ UTxO $ upgradeTxOut `Map.map` unUTxO utxo
+    return $ UTxO $ upgradeMaryTxOut `Map.map` unUTxO utxo
 
 instance TranslateEra AlonzoEra ShelleyGovState where
   translateEra ctxt ps =
     return
       ShelleyGovState
-        { sgsCurProposals = translateEra' ctxt $ sgsCurProposals ps
-        , sgsFutureProposals = translateEra' ctxt $ sgsFutureProposals ps
-        , sgsCurPParams = translateEra' ctxt $ sgsCurPParams ps
-        , sgsPrevPParams = translateEra' ctxt $ sgsPrevPParams ps
-        , sgsFuturePParams = translateEra' ctxt $ sgsFuturePParams ps
+        { sgsCurProposals = translateEraWithoutError ctxt $ sgsCurProposals ps
+        , sgsFutureProposals = translateEraWithoutError ctxt $ sgsFutureProposals ps
+        , sgsCurPParams = translateEraWithoutError ctxt $ sgsCurPParams ps
+        , sgsPrevPParams = translateEraWithoutError ctxt $ sgsPrevPParams ps
+        , sgsFuturePParams = translateEraWithoutError ctxt $ sgsFuturePParams ps
         }
 
 instance TranslateEra AlonzoEra ProposedPPUpdates where

@@ -48,6 +48,12 @@ library
     Cardano.Ledger.Dijkstra.TxCert
     Cardano.Ledger.Dijkstra.TxInfo
     Cardano.Ledger.Dijkstra.TxOut
+    Cardano.Ledger.Dijkstra.TxOut.ApplicationAssets
+    Cardano.Ledger.Dijkstra.TxOut.CapacityDeposit
+    Cardano.Ledger.Dijkstra.TxOut.LedgerInstances
+    Cardano.Ledger.Dijkstra.TxOut.Translation
+    Cardano.Ledger.Dijkstra.TxOut.Value
+    Cardano.Ledger.Dijkstra.TxOut.Value.Translation
     Cardano.Ledger.Dijkstra.TxWits
     Cardano.Ledger.Dijkstra.UTxO
 
@@ -82,6 +88,7 @@ library
     Cardano.Ledger.Dijkstra.State.CertState
     Cardano.Ledger.Dijkstra.State.Stake
     Cardano.Ledger.Dijkstra.Translation
+    Cardano.Ledger.Dijkstra.TxOut.Codec
 
   hs-source-dirs: src
   default-language: Haskell2010
@@ -125,6 +132,7 @@ library
     containers,
     data-default,
     deepseq,
+    groups,
     mempack,
     microlens,
     nothunks,
@@ -267,6 +275,20 @@ test-suite tests
     Test.Cardano.Ledger.Dijkstra.Binary.CddlSpec
     Test.Cardano.Ledger.Dijkstra.GoldenSpec
     Test.Cardano.Ledger.Dijkstra.Plutus.PlutusSpec
+    Test.Cardano.Ledger.Dijkstra.TxOut.Allocation.Fixture
+    Test.Cardano.Ledger.Dijkstra.TxOut.AllocationSpec
+    Test.Cardano.Ledger.Dijkstra.TxOut.ApplicationAssets.Fixture
+    Test.Cardano.Ledger.Dijkstra.TxOut.ApplicationAssetsSpec
+    Test.Cardano.Ledger.Dijkstra.TxOut.Compatibility.Fixture
+    Test.Cardano.Ledger.Dijkstra.TxOut.Compatibility.Spec
+    Test.Cardano.Ledger.Dijkstra.TxOut.Encoding.Fixture
+    Test.Cardano.Ledger.Dijkstra.TxOut.EncodingSpec
+    Test.Cardano.Ledger.Dijkstra.TxOut.Upgrade.Fixture
+    Test.Cardano.Ledger.Dijkstra.TxOut.UpgradeSpec
+    Test.Cardano.Ledger.Dijkstra.TxOut.Value.Fixture
+    Test.Cardano.Ledger.Dijkstra.TxOut.Value.Translation.Fixture
+    Test.Cardano.Ledger.Dijkstra.TxOut.Value.TranslationSpec
+    Test.Cardano.Ledger.Dijkstra.TxOut.ValueSpec
 
   default-language: Haskell2010
   ghc-options:
@@ -282,14 +304,19 @@ test-suite tests
     -with-rtsopts=-N
 
   build-depends:
+    aeson,
     base,
+    bytestring,
     cardano-base:testlib,
     cardano-data,
     cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
-    cardano-ledger-babbage:testlib,
-    cardano-ledger-binary:testlib,
+    cardano-ledger-babbage:{cardano-ledger-babbage, testlib},
+    cardano-ledger-binary:{cardano-ledger-binary, testlib},
     cardano-ledger-conway:{cardano-ledger-conway, testlib},
     cardano-ledger-core:{cardano-ledger-core, testlib},
     cardano-ledger-dijkstra:{cardano-ledger-dijkstra, cddl, testlib},
+    cardano-ledger-mary,
     cardano-ledger-shelley:testlib,
     cardano-protocol:{cardano-protocol, testlib},
+    containers,
+    microlens,

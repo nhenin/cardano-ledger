@@ -157,7 +157,7 @@ alonzoMkRedeemers ::
   Redeemers era
 alonzoMkRedeemers = Redeemers . Map.fromList
 
-genTxOut :: Reflect era => Value era -> GenRS era (TxOut era)
+genTxOut :: (Reflect era, TxOutAllocation era ~ Value era) => Value era -> GenRS era (TxOut era)
 genTxOut val = do
   addr <- genRecipient
   cred <- maybe (error "BootstrapAddress encountered") pure $ paymentCredAddr addr
@@ -460,7 +460,8 @@ genFreshTxIn tries = do
 --   the MUtxo in the Model to the one generated.  This way the Tx we generate may
 --   spend some of the old UTxo. The result has at most 1 entry from the
 --   old MUtxo, and If it has only one entry, that entry is not from the old MUtxo
-genUTxO :: EraGenericGen era => GenRS era (MUtxo era, Maybe (UtxoEntry era))
+genUTxO ::
+  (EraGenericGen era, TxOutAllocation era ~ Value era) => GenRS era (MUtxo era, Maybe (UtxoEntry era))
 genUTxO = do
   ins <- genFreshTxIn 100
   pairs <- sequence (map (\x -> (x,) <$> genOut) ins)
@@ -661,7 +662,7 @@ spendOnly txOut = case txOut ^. addrTxOutL of
 --   and coin of the excess amount included in the inputs, above what is needed to pay the minimum fee.
 genCollateralUTxO ::
   forall era.
-  (HasCallStack, EraGenericGen era) =>
+  (HasCallStack, EraGenericGen era, TxOutAllocation era ~ Value era) =>
   [Addr] ->
   Coin ->
   MUtxo era ->
@@ -719,7 +720,8 @@ genCollateralUTxO collateralAddresses (Coin fee) utxo = do
 --   handled separately). The idea is to make sum(txOuts) == sum(genRecipientsFrom txouts), the
 --   sum will be the same, but the size may be different.
 genRecipientsFrom ::
-  forall era. EraGenericGen era => [TxOut era] -> GenRS era [TxOut era]
+  forall era.
+  (EraGenericGen era, TxOutAllocation era ~ Value era) => [TxOut era] -> GenRS era [TxOut era]
 genRecipientsFrom txOuts = do
   let outCount = length txOuts
   approxCount <- lift $ choose (1, outCount)
@@ -809,7 +811,7 @@ minus m (Just (txin, _)) = Map.delete txin m
 
 genAlonzoTx ::
   forall era.
-  EraGenericGen era =>
+  (EraGenericGen era, TxOutAllocation era ~ Value era) =>
   SlotNo -> GenRS era (UTxO era, Tx TopTx era)
 genAlonzoTx slot = do
   (utxo, tx, _fee, _old) <- genAlonzoTxAndInfo slot
@@ -826,7 +828,7 @@ applyIsValid isValid = case reify @era of
 
 genAlonzoTxAndInfo ::
   forall era.
-  EraGenericGen era =>
+  (EraGenericGen era, TxOutAllocation era ~ Value era) =>
   SlotNo ->
   GenRS
     era

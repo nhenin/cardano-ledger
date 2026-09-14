@@ -2,6 +2,22 @@
 
 ## 1.22.0.0
 
+* Rename `translateEra'` to `translateEraWithoutError`, preserving its type
+  signature and behavior.
+* Add `CapacityDeposit` in `Cardano.Ledger.TxOut.CapacityDeposit`, retaining the
+  representation and instances previously defined in the Dijkstra package.
+* Make `upgradeTxOut` accept `PParams (PreviousEra era)` so each era can
+  choose its output-upgrade policy using the source protocol parameters.
+  Representation-only upgrades may ignore these parameters.
+* Add the `RecoverCapacityDeposit era = TxOut era -> CapacityDeposit` function
+  alias for output conversions with an injected recovery policy.
+* Add `TxOutAllocation` to `EraTxOut`, defaulting to `Value`, and use it as the
+  monetary input to `mkBasicTxOut`. `mkCoinTxOut` now requires
+  `TxOutAllocation era ~ Value era`; eras needing a separate allocation must
+  provide it explicitly.
+* Move `EraTxOut`, its associated `TxOut`, `Value`, and output helpers into
+  the internal `Cardano.Ledger.Core.TxOut` module. `Cardano.Ledger.Core`
+  continues to export the same interface; implementations are unchanged.
 * Add new helpers with predicate failure injection. List below also shows direct mapping to older helpers without injection:
   - `?!.` -> `?!`
   - `?!#.` -> `?!#`

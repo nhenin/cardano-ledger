@@ -2,6 +2,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Babbage.Imp.UtxowSpec.Valid (spec) where
 
@@ -30,7 +32,7 @@ import Test.Cardano.Ledger.Shelley.Era (nativeAlwaysFails, nativeAlwaysSucceeds)
 
 spec ::
   forall era.
-  BabbageEraImp era =>
+  (BabbageEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "Valid" $ do
   it "Native reference scripts must not be witnessed" $ do

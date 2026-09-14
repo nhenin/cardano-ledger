@@ -544,6 +544,14 @@ class
     , MonadFail m
     ) =>
     m (ImpTestState era)
+  default initImpTestState ::
+    ( HasKeyPairs s
+    , MonadState s m
+    , HasStatefulGen g m
+    , MonadFail m
+    , TxOutAllocation era ~ Value era
+    ) =>
+    m (ImpTestState era)
   initImpTestState = initNewEpochState >>= defaultInitImpTestState
 
   -- | Try to find a sufficient number of KeyPairs that would satisfy a native script.
@@ -643,7 +651,7 @@ defaultInitNewEpochState modifyPrevEraNewEpochState = do
         nes
           & nesEsL . curPParamsEpochStateL . ppProtocolVersionL .~ ProtVer majProtVer 0
           & nesELL .~ pred (impEraStartEpochNo @era)
-  pure $ translateEra' genesis $ modifyPrevEraNewEpochState prevEraNewEpochState
+  pure $ translateEraWithoutError genesis $ modifyPrevEraNewEpochState prevEraNewEpochState
 
 -- | For debugging purposes we start the era at the epoch number that matches the starting
 -- protocol version for the era times a 100
@@ -656,6 +664,7 @@ defaultInitImpTestState ::
   forall era s g m.
   ( EraGov era
   , EraTxOut era
+  , TxOutAllocation era ~ Value era
   , HasKeyPairs s
   , MonadState s m
   , HasStatefulGen g m
@@ -1174,7 +1183,7 @@ fixupTxOuts tx = do
 
 fixupFees ::
   forall era.
-  (ShelleyEraImp era, HasCallStack) =>
+  (ShelleyEraImp era, TxOutAllocation era ~ Value era, HasCallStack) =>
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)
 fixupFees txOriginal = impAnn "fixupFees" $ do
@@ -1240,7 +1249,7 @@ fixupAuxDataHash tx
 
 shelleyFixupTx ::
   forall era.
-  (ShelleyEraImp era, HasCallStack) =>
+  (ShelleyEraImp era, TxOutAllocation era ~ Value era, HasCallStack) =>
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)
 shelleyFixupTx =
@@ -1895,13 +1904,19 @@ freshBootstapAddress = do
   modify $ keyPairsByronL %~ Map.insert bootAddr keyPair
   pure bootAddr
 
-sendCoinTo :: (ShelleyEraImp era, HasCallStack) => Addr -> Coin -> ImpTestM era TxIn
+sendCoinTo ::
+  (ShelleyEraImp era, TxOutAllocation era ~ Value era, HasCallStack) =>
+  Addr -> Coin -> ImpTestM era TxIn
 sendCoinTo addr = sendValueTo addr . inject
 
-sendCoinTo_ :: (ShelleyEraImp era, HasCallStack) => Addr -> Coin -> ImpTestM era ()
+sendCoinTo_ ::
+  (ShelleyEraImp era, TxOutAllocation era ~ Value era, HasCallStack) =>
+  Addr -> Coin -> ImpTestM era ()
 sendCoinTo_ addr = void . sendCoinTo addr
 
-sendValueTo :: (ShelleyEraImp era, HasCallStack) => Addr -> Value era -> ImpTestM era TxIn
+sendValueTo ::
+  (ShelleyEraImp era, TxOutAllocation era ~ Value era, HasCallStack) =>
+  Addr -> Value era -> ImpTestM era TxIn
 sendValueTo addr amount = do
   tx <-
     submitTxAnn
@@ -1910,7 +1925,9 @@ sendValueTo addr amount = do
         & bodyTxL . outputsTxBodyL .~ SSeq.singleton (mkBasicTxOut addr amount)
   pure $ txInAt 0 tx
 
-sendValueTo_ :: (ShelleyEraImp era, HasCallStack) => Addr -> Value era -> ImpTestM era ()
+sendValueTo_ ::
+  (ShelleyEraImp era, TxOutAllocation era ~ Value era, HasCallStack) =>
+  Addr -> Value era -> ImpTestM era ()
 sendValueTo_ addr = void . sendValueTo addr
 
 -- | Modify the current new epoch state with a function
@@ -2208,7 +2225,7 @@ impGetUTxO txIn = impAnn "Looking up TxOut" $ do
     Nothing -> error $ "Failed to get TxOut for " <> show txIn
 
 produceScript ::
-  (ShelleyEraImp era, HasCallStack) =>
+  (ShelleyEraImp era, TxOutAllocation era ~ Value era, HasCallStack) =>
   ScriptHash ->
   ImpTestM era TxIn
 produceScript scriptHash = do

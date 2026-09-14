@@ -6,6 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Dijkstra.Imp.UtxowSpec (spec) where
 
@@ -42,7 +43,7 @@ import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsNoDatum)
 
 spec ::
   forall era.
-  DijkstraEraImp era =>
+  (DijkstraEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXOW" $ do
   describe "RequireGuard native scripts" $ do

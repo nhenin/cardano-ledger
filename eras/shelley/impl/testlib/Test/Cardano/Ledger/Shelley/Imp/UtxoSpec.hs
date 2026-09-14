@@ -3,6 +3,8 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Shelley.Imp.UtxoSpec (spec) where
 
@@ -16,7 +18,9 @@ import Lens.Micro
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest
 
-spec :: ShelleyEraImp era => SpecWith (ImpInit (LedgerSpec era))
+spec ::
+  (ShelleyEraImp era, TxOutAllocation era ~ Value era) =>
+  SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXO" $ do
   describe "ShelleyUtxoPredFailure" $ do
     it "ValueNotConservedUTxO" $ do

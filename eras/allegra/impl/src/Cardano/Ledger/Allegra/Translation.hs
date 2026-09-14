@@ -15,6 +15,7 @@ module Cardano.Ledger.Allegra.Translation (shelleyToAllegraAVVMsToDelete) where
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.State
 import Cardano.Ledger.Allegra.Tx ()
+import Cardano.Ledger.Allegra.TxOut (upgradeShelleyTxOut)
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -62,7 +63,7 @@ instance TranslateEra AllegraEra NewEpochState where
         { nesEL = nesEL nes
         , nesBprev = nesBprev nes
         , nesBcur = nesBcur nes
-        , nesEs = translateEra' ctxt $ returnRedeemAddrsToReserves $ nesEs nes
+        , nesEs = translateEraWithoutError ctxt $ returnRedeemAddrsToReserves $ nesEs nes
         , nesRu = nesRu nes
         , nesPd = nesPd nes
         , -- At this point, the consensus layer has passed in our stashed AVVM
@@ -91,35 +92,35 @@ instance TranslateEra AllegraEra FuturePParams where
 
 instance TranslateEra AllegraEra ProposedPPUpdates where
   translateEra ctxt (ProposedPPUpdates ppup) =
-    return $ ProposedPPUpdates $ Map.map (translateEra' ctxt) ppup
+    return $ ProposedPPUpdates $ Map.map (translateEraWithoutError ctxt) ppup
 
 instance TranslateEra AllegraEra ShelleyGovState where
   translateEra ctxt ps =
     return
       ShelleyGovState
-        { sgsCurProposals = translateEra' ctxt $ sgsCurProposals ps
-        , sgsFutureProposals = translateEra' ctxt $ sgsFutureProposals ps
-        , sgsCurPParams = translateEra' ctxt $ sgsCurPParams ps
-        , sgsPrevPParams = translateEra' ctxt $ sgsPrevPParams ps
-        , sgsFuturePParams = translateEra' ctxt $ sgsFuturePParams ps
+        { sgsCurProposals = translateEraWithoutError ctxt $ sgsCurProposals ps
+        , sgsFutureProposals = translateEraWithoutError ctxt $ sgsFutureProposals ps
+        , sgsCurPParams = translateEraWithoutError ctxt $ sgsCurPParams ps
+        , sgsPrevPParams = translateEraWithoutError ctxt $ sgsPrevPParams ps
+        , sgsFuturePParams = translateEraWithoutError ctxt $ sgsFuturePParams ps
         }
 
 instance TranslateEra AllegraEra ShelleyTxOut where
-  translateEra NoGenesis = pure . upgradeTxOut
+  translateEra NoGenesis = pure . upgradeShelleyTxOut
 
 instance TranslateEra AllegraEra UTxO where
   translateEra ctxt utxo =
-    return $ UTxO (translateEra' ctxt `Map.map` unUTxO utxo)
+    return $ UTxO (translateEraWithoutError ctxt `Map.map` unUTxO utxo)
 
 instance TranslateEra AllegraEra UTxOState where
   translateEra ctxt us =
     return
       UTxOState
-        { utxosUtxo = translateEra' ctxt $ utxosUtxo us
+        { utxosUtxo = translateEraWithoutError ctxt $ utxosUtxo us
         , utxosDeposited = utxosDeposited us
         , utxosFees = utxosFees us
-        , utxosGovState = translateEra' ctxt $ utxosGovState us
-        , utxosInstantStake = translateEra' ctxt $ utxosInstantStake us
+        , utxosGovState = translateEraWithoutError ctxt $ utxosGovState us
+        , utxosInstantStake = translateEraWithoutError ctxt $ utxosInstantStake us
         , utxosDonation = utxosDonation us
         }
 
@@ -144,16 +145,16 @@ instance TranslateEra AllegraEra ShelleyCertState where
   translateEra ctxt ls =
     pure
       ShelleyCertState
-        { shelleyCertDState = translateEra' ctxt $ shelleyCertDState ls
-        , shelleyCertPState = translateEra' ctxt $ shelleyCertPState ls
+        { shelleyCertDState = translateEraWithoutError ctxt $ shelleyCertDState ls
+        , shelleyCertPState = translateEraWithoutError ctxt $ shelleyCertPState ls
         }
 
 instance TranslateEra AllegraEra LedgerState where
   translateEra ctxt ls =
     return
       LedgerState
-        { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
-        , lsCertState = translateEra' ctxt $ lsCertState ls
+        { lsUTxOState = translateEraWithoutError ctxt $ lsUTxOState ls
+        , lsCertState = translateEraWithoutError ctxt $ lsCertState ls
         }
 
 instance TranslateEra AllegraEra SnapShots where
@@ -164,8 +165,8 @@ instance TranslateEra AllegraEra EpochState where
     return
       EpochState
         { esChainAccountState = esChainAccountState es
-        , esSnapshots = translateEra' ctxt $ esSnapshots es
-        , esLState = translateEra' ctxt $ esLState es
+        , esSnapshots = translateEraWithoutError ctxt $ esSnapshots es
+        , esLState = translateEraWithoutError ctxt $ esLState es
         , esNonMyopic = esNonMyopic es
         }
 

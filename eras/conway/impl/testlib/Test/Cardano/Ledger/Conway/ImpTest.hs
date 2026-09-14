@@ -495,7 +495,7 @@ setupDRepWithoutStake = do
 
 -- | Registers a new DRep, registers its stake credentials and delegates the specified amount of ADA to it.
 setupSingleDRep ::
-  ConwayEraImp era =>
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   Integer ->
   ImpTestM era (Credential DRepRole, Credential Staking, KeyPair Payment)
 setupSingleDRep stake = impAnn "Set up a single DRep" $ do
@@ -512,7 +512,7 @@ setupSingleDRep stake = impAnn "Set up a single DRep" $ do
   pure (KeyHashObj drepKH, KeyHashObj delegatorKH, spendingKP)
 
 delegateToDRep ::
-  ConwayEraImp era =>
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   Credential Staking ->
   Coin ->
   DRep ->
@@ -544,7 +544,7 @@ getDRepState dRepCred = do
 -- in Conway. The Shelley version of this function would have to separately
 -- register the staking credential and then delegate it.
 setupPoolWithStake ::
-  ConwayEraImp era =>
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   Coin ->
   ImpTestM era (KeyHash StakePool, Credential Payment, Credential Staking)
 setupPoolWithStake delegCoin = impAnn "Set up pool with stake" $ do
@@ -1356,6 +1356,7 @@ electBasicCommittee ::
   forall era.
   ( HasCallStack
   , ConwayEraImp era
+  , TxOutAllocation era ~ Value era
   ) =>
   ImpTestM
     era
@@ -1399,6 +1400,7 @@ setupActiveInactiveCCMembers ::
   forall era.
   ( HasCallStack
   , ConwayEraImp era
+  , TxOutAllocation era ~ Value era
   ) =>
   -- | Number of active committee members
   Int ->
@@ -1890,7 +1892,7 @@ submitBootstrapAware action failAction =
         (failAction pBFailures)
 
 delegateSPORewardAddressToDRep_ ::
-  ConwayEraImp era =>
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   KeyHash StakePool ->
   Coin ->
   DRep ->

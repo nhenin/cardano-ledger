@@ -2,6 +2,11 @@
 
 ## 1.20.0.0
 
+* Accept source protocol parameters in `upgradeTxOut`; the unsupported
+  Byron-to-Shelley conversion remains unchanged
+* Require `TxOutAllocation era ~ Value era` for `genesisUTxO`,
+  `registerInitialFunds`, `injectInitialFundsAndStaking`, and
+  `shelleyRegisterInitialFundsThenStaking`, which construct outputs from values
 * Replace `StakeKeyAlreadyRegisteredDELEG` constructor with `DelegAccountAlreadyRegistered` in `ShelleyDelegPredFailure`, which wraps the new `AccountAlreadyRegistered` type instead of `Credential Staking`
 * Add `AccountAlreadyRegistered` predicate failure together with `checkAccountAlreadyRegistered`
 * Add `EncCBOR`, `ToCBOR` for `Block`
@@ -11,6 +16,10 @@
 
 ### `testlib`
 
+* Require `TxOutAllocation era ~ Value era` for generic output-building examples,
+  fee and funding helpers, and the specs that use them
+* Constrain `defaultInitImpTestState` and the default implementation of
+  `initImpTestState` with the same equality; the public method does not require it
 * Make `fixupTxOuts` parametric on level
 * Add `DecCBOR` instance for `Block`
 * Add `registerPoolWithParams`, which registers a stake pool with adjusted parameters

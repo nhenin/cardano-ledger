@@ -7,6 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -247,6 +248,7 @@ applyRUpd ru m =
 notValidatingTx ::
   forall era.
   ( AlonzoEraTxWits era
+  , TxOutAllocation era ~ Value era
   , EraPlutusTxInfo PlutusV1 era
   , AlonzoEraTxBody era
   , EraModel era

@@ -2,6 +2,59 @@
 
 ## 0.4.0.0
 
+* Keep the output representation and projections in `TxOut`. Provide its
+  `EraTxOut`, `AlonzoEraTxOut` and `BabbageEraTxOut` instances through
+  `TxOut.LedgerInstances`, allowing `TxOut.Translation` to depend on the representation
+  without an import cycle. Import `TxOut.LedgerInstances ()` when using these interfaces
+  without an existing `Dijkstra.Core` or `Dijkstra` import.
+* Give `TxOut DijkstraEra` its own `DijkstraTxOut` representation. Set its
+  construction allocation to `OutputValue` and its `Value` to `ApplicationAssets`.
+  Store `CapacityDeposit` separately in all six compact output variants and
+  expose `capacityDepositTxOutF`; field updates preserve it.
+  `fromBabbageTxOut` now requires the deposit explicitly, while `toBabbageTxOut`
+  projects application assets.
+* Encode Dijkstra outputs as a CBOR map with mandatory keys `0` (address),
+  `1` (application assets) and `4` (capacity deposit); keep optional datum and
+  reference script keys. Missing deposits and legacy output lists are rejected.
+  MemPack carries the deposit and exact compact application payload under a new
+  envelope tag; JSON exposes both allocations. Update the output CDDL accordingly.
+* Make `upgradeTxOut` accept the source `PParams ConwayEra` and delegate to
+  `TxOut.Translation.fromConway`, which recovers the deposit from Conway's
+  minimum-ADA requirement.
+  `fromConway'` remains available for conversions with an injected policy;
+  `upgradeTxOut` fails explicitly if the source cannot fund the requested
+  allocation, as a development invariant check. Source ADA and native assets
+  are preserved across the split.
+* Extract `TxOut.Value.Translation.recoverOutputAllocation` to recover and validate
+  the allocation independently of structural migration. `fromConway'`
+  composes it with a private structural conversion.
+* Make `TxOut.Translation.fromConway` accept source Conway protocol
+  parameters and wire the existing `requiredCapacityDeposit` policy directly.
+  `fromConway'` accepts an injected recovery policy. Recovery retains the
+  assumption that the supplied price matches the price at output creation.
+* Re-export `CapacityDeposit` from Core through `TxOut.CapacityDeposit`, preserving
+  existing imports, representation and instances.
+* Document the additional capacity-deposit management exposed by a change to
+  `coinsPerUTxOByte`, distinguishing historical allocation, current requirement
+  and release accounting without selecting a repricing policy.
+* Introduce the Dijkstra output-split model in `TxOut.ApplicationAssets`,
+  `TxOut.CapacityDeposit`, and `TxOut.Value`: the transitional `OutputValue`
+  contains both allocations and exposes their total ADA through `outputCoins`.
+  `TxOut.Value.Translation.fromMaryValue` maps a historical output's total
+  holdings using a caller-supplied deposit, rejecting negative or underfunded
+  allocations; `toMaryValue` projects total holdings without retaining the split.
+  `fromMaryOutputValue` derives the deposit from `getMinCoinTxOut` using the
+  supplied protocol parameters and complete source output, then performs the
+  checked split. It supports any `EraTxOut` whose `Value` is `MaryValue`.
+  `requiredCapacityDeposit` exposes the era's requirement independently of
+  the split.
+  Protocol rules, ledger-state migration and transaction API upgrades still need
+  integration with the split output model and its configured source policy.
+* Represent `ApplicationAssets` as a `newtype` of `MaryValue`, deriving `Val`,
+  arithmetic and CBOR/JSON instances while retaining the `applicationCoins` and
+  `nativeAssets` accessors and an adapted compact representation. These operations
+  concern only application quantities; no capacity deposit is allocated by
+  these instances.
 * Remove re-exported `mintTxBodyL`, `mintedTxBodyF`, and `mintValueTxBodyF`; use the typed forging API from `Cardano.Ledger.Mary.Core`
 * Require `cardano-ledger-mary >=1.12`; public interfaces use the native-asset types from their new Mary modules
 * Re-export the typed forging API from `Cardano.Ledger.Dijkstra.Core`:
@@ -50,6 +103,8 @@
 
 ### testlib
 
+* Require `TxOutAllocation era ~ Value era` in generic output-construction
+  helpers, transaction fixups, examples and their dependent specs.
 * Add `switchTxToLegacyMode` helper
 * Add `balanceSubTransactions`
 * Expose `fixupSubTransactions`

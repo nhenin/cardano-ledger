@@ -7,6 +7,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
 -- | The example transactions in this module are not valid transactions. We
@@ -165,6 +166,7 @@ exampleDijkstraBasedTopTx ::
   , EraPlutusTxInfo PlutusV2 era
   , EraPlutusTxInfo PlutusV3 era
   , EraPlutusTxInfo PlutusV4 era
+  , TxOutAllocation era ~ Value era
   ) =>
   Tx TopTx era
 exampleDijkstraBasedTopTx =
@@ -182,6 +184,7 @@ exampleDijkstraBasedSubTx ::
   , EraPlutusTxInfo PlutusV2 era
   , EraPlutusTxInfo PlutusV3 era
   , EraPlutusTxInfo PlutusV4 era
+  , TxOutAllocation era ~ Value era
   ) =>
   Tx SubTx era
 exampleDijkstraBasedSubTx =
@@ -199,6 +202,7 @@ addDijkstraBasedTopTxFeatures ::
   , EraPlutusTxInfo 'PlutusV3 era
   , EraPlutusTxInfo 'PlutusV4 era
   , Value era ~ MaryValue
+  , TxOutAllocation era ~ Value era
   ) =>
   Tx TopTx era ->
   Tx TopTx era
@@ -229,6 +233,7 @@ addDijkstraBasedTxFeatures ::
   , EraPlutusTxInfo 'PlutusV1 era
   , EraPlutusTxInfo 'PlutusV4 era
   , Value era ~ MaryValue
+  , TxOutAllocation era ~ Value era
   ) =>
   Tx l era ->
   Tx l era

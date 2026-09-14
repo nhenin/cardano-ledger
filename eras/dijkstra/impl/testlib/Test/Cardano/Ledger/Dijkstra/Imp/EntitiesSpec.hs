@@ -5,6 +5,8 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Dijkstra.Imp.EntitiesSpec (spec) where
 
@@ -31,7 +33,9 @@ import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
 
-spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
+spec ::
+  forall era.
+  (DijkstraEraImp era, TxOutAllocation era ~ Value era) => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "ENTITIES" $ do
   it "Withdrawals from an unregistered staking address" $ do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2

@@ -74,7 +74,7 @@ instance TranslateEra DijkstraEra NewEpochState where
         { nesEL = nesEL nes
         , nesBprev = nesBprev nes
         , nesBcur = nesBcur nes
-        , nesEs = translateEra' ctxt $ nesEs nes
+        , nesEs = translateEraWithoutError ctxt $ nesEs nes
         , nesRu = nesRu nes
         , nesPd = nesPd nes
         , stashedAVVMAddresses = ()
@@ -102,8 +102,8 @@ instance TranslateEra DijkstraEra EpochState where
     pure $
       EpochState
         { esChainAccountState = esChainAccountState es
-        , esSnapshots = translateEra' ctxt $ esSnapshots es
-        , esLState = translateEra' ctxt $ esLState es
+        , esSnapshots = translateEraWithoutError ctxt $ esSnapshots es
+        , esLState = translateEraWithoutError ctxt $ esLState es
         , esNonMyopic = esNonMyopic es
         }
 
@@ -121,7 +121,7 @@ instance TranslateEra DijkstraEra LedgerState where
   translateEra ctx ls =
     pure
       LedgerState
-        { lsUTxOState = translateEra' ctx $ ls ^. lsUTxOStateL
+        { lsUTxOState = translateEraWithoutError ctx $ ls ^. lsUTxOStateL
         , lsCertState = translateCertState ctx $ ls ^. lsCertStateL
         }
 
@@ -131,9 +131,9 @@ translateCertState ::
   CertState DijkstraEra
 translateCertState ctx ConwayCertState {..} =
   ConwayCertState
-    { conwayCertVState = translateEra' ctx conwayCertVState
-    , conwayCertPState = translateEra' ctx conwayCertPState
-    , conwayCertDState = translateEra' ctx conwayCertDState
+    { conwayCertVState = translateEraWithoutError ctx conwayCertVState
+    , conwayCertPState = translateEraWithoutError ctx conwayCertPState
+    , conwayCertDState = translateEraWithoutError ctx conwayCertDState
     }
 
 instance TranslateEra DijkstraEra GovAction where
@@ -150,7 +150,7 @@ instance TranslateEra DijkstraEra GovActionState where
         , gasCommitteeVotes = gasCommitteeVotes
         , gasDRepVotes = gasDRepVotes
         , gasStakePoolVotes = gasStakePoolVotes
-        , gasProposalProcedure = translateEra' ctxt gasProposalProcedure
+        , gasProposalProcedure = translateEraWithoutError ctxt gasProposalProcedure
         , gasProposedIn = gasProposedIn
         , gasExpiresAfter = gasExpiresAfter
         }
@@ -162,7 +162,7 @@ instance TranslateEra DijkstraEra PulsingSnapshot where
   translateEra ctxt PulsingSnapshot {..} =
     pure $
       PulsingSnapshot
-        { psProposals = translateEra' ctxt <$> psProposals
+        { psProposals = translateEraWithoutError ctxt <$> psProposals
         , psDRepDistr = psDRepDistr
         , psDRepState = psDRepState
         , psPoolDistr = psPoolDistr
@@ -174,8 +174,8 @@ instance TranslateEra DijkstraEra EnactState where
       EnactState
         { ensCommittee = coerce ensCommittee
         , ensConstitution = coerce ensConstitution
-        , ensCurPParams = translateEra' ctxt ensCurPParams
-        , ensPrevPParams = translateEra' ctxt ensPrevPParams
+        , ensCurPParams = translateEraWithoutError ctxt ensCurPParams
+        , ensPrevPParams = translateEraWithoutError ctxt ensPrevPParams
         , ensTreasury = ensTreasury
         , ensWithdrawals = ensWithdrawals
         , ensPrevGovActionIds = ensPrevGovActionIds
@@ -185,14 +185,14 @@ instance TranslateEra DijkstraEra RatifyState where
   translateEra ctxt RatifyState {..} =
     pure $
       RatifyState
-        { rsEnactState = translateEra' ctxt rsEnactState
-        , rsEnacted = translateEra' ctxt <$> rsEnacted
+        { rsEnactState = translateEraWithoutError ctxt rsEnactState
+        , rsEnacted = translateEraWithoutError ctxt <$> rsEnacted
         , rsExpired = rsExpired
         , rsDelayed = rsDelayed
         }
 
 instance TranslateEra DijkstraEra DRepPulsingState where
-  translateEra ctxt dps = pure $ DRComplete (translateEra' ctxt x) (translateEra' ctxt y)
+  translateEra ctxt dps = pure $ DRComplete (translateEraWithoutError ctxt x) (translateEraWithoutError ctxt y)
     where
       (x, y) = finishDRepPulser dps
 
@@ -201,22 +201,22 @@ instance TranslateEra DijkstraEra ConwayGovState where
     pure $
       ConwayGovState
         { cgsCommittee = coerce cgsCommittee
-        , cgsProposals = translateEra' ctxt cgsProposals
+        , cgsProposals = translateEraWithoutError ctxt cgsProposals
         , cgsConstitution = coerce cgsConstitution
-        , cgsCurPParams = translateEra' ctxt cgsCurPParams
-        , cgsPrevPParams = translateEra' ctxt cgsPrevPParams
-        , cgsFuturePParams = translateEra' ctxt cgsFuturePParams
-        , cgsDRepPulsingState = translateEra' ctxt cgsDRepPulsingState
+        , cgsCurPParams = translateEraWithoutError ctxt cgsCurPParams
+        , cgsPrevPParams = translateEraWithoutError ctxt cgsPrevPParams
+        , cgsFuturePParams = translateEraWithoutError ctxt cgsFuturePParams
+        , cgsDRepPulsingState = translateEraWithoutError ctxt cgsDRepPulsingState
         }
 
 instance TranslateEra DijkstraEra UTxOState where
   translateEra ctxt us =
     pure
       UTxOState
-        { utxosUtxo = translateEra' ctxt $ utxosUtxo us
+        { utxosUtxo = translateEraWithoutError ctxt $ utxosUtxo us
         , utxosDeposited = utxosDeposited us
         , utxosFees = utxosFees us
-        , utxosGovState = translateEra' ctxt $ utxosGovState us
+        , utxosGovState = translateEraWithoutError ctxt $ utxosGovState us
         , utxosInstantStake = coerce $ utxosInstantStake us
         , utxosDonation = utxosDonation us
         }

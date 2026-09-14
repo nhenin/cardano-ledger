@@ -4,6 +4,8 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Shelley.Imp.UtxowSpec (spec) where
 
@@ -32,7 +34,10 @@ import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.Arbitrary (genUtf8StringOfSize)
 import Test.Cardano.Ledger.Shelley.ImpTest
 
-spec :: forall era. ShelleyEraImp era => SpecWith (ImpInit (LedgerSpec era))
+spec ::
+  forall era.
+  (ShelleyEraImp era, TxOutAllocation era ~ Value era) =>
+  SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXOW" $ do
   describe "Bootstrap Witness" $ do
     -- https://github.com/IntersectMBO/formal-ledger-specifications/issues/1280

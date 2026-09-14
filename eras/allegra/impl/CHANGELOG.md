@@ -2,11 +2,16 @@
 
 ## 1.10.1.0
 
+* Export `upgradeShelleyTxOut` for the existing structural conversion and use it
+  in era translation; `upgradeTxOut` accepts but ignores the source protocol
+  parameters, preserving historical behavior
 * Add `EncCBOR`, `ToCBOR` for `Block`
 * Add `DecCBOR` instances for `Annotator Block`
 
 ### `testlib`
 
+* Require `TxOutAllocation era ~ Value era` for `exampleAllegraBasedTx` and
+  `Test.Cardano.Ledger.Allegra.Imp.spec`
 * Add `DecCBOR` instance for `Block`
 
 ## 1.10.0.0

@@ -68,6 +68,7 @@ exampleMaryTx =
 exampleMaryBasedTx ::
   forall era l.
   ( EraTx era
+  , TxOutAllocation era ~ Value era
   , MaryEraTxBody era
   , Value era ~ MaryValue
   , AllegraEraTxAuxData era
