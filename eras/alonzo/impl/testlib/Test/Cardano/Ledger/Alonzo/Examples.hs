@@ -164,6 +164,7 @@ exampleAlonzoBasedTopTx ::
   ( AlonzoEraTx era
   , EraPlutusTxInfo 'PlutusV1 era
   , Value era ~ MaryValue
+  , TxOutAllocation era ~ Value era
   ) =>
   Tx TopTx era
 exampleAlonzoBasedTopTx =
@@ -176,6 +177,7 @@ exampleAlonzoBasedTx ::
   , EraPlutusTxInfo 'PlutusV1 era
   , Value era ~ MaryValue
   , Typeable l
+  , TxOutAllocation era ~ Value era
   ) =>
   Tx l era
 exampleAlonzoBasedTx =
@@ -197,6 +199,7 @@ addAlonzoBasedTxFeatureExamples ::
   ( AlonzoEraTx era
   , EraPlutusTxInfo 'PlutusV1 era
   , Value era ~ MaryValue
+  , TxOutAllocation era ~ Value era
   ) =>
   Tx l era ->
   Tx l era

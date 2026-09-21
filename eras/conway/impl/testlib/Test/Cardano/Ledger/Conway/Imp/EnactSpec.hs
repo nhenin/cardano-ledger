@@ -47,6 +47,7 @@ spec ::
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
+  , TxOutAllocation era ~ Value era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "ENACT" $ do
@@ -60,7 +61,8 @@ spec = describe "ENACT" $ do
   pparamPredictionSpec
 
 treasuryWithdrawalsSpec ::
-  forall era. ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
+  forall era.
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) => SpecWith (ImpInit (LedgerSpec era))
 treasuryWithdrawalsSpec =
   describe "Treasury withdrawals" $ do
     -- Treasury withdrawals are disallowed in bootstrap, so we're running these tests only post-bootstrap
@@ -193,6 +195,7 @@ hardForkInitiationSpec ::
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
+  , TxOutAllocation era ~ Value era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 hardForkInitiationSpec =
@@ -239,6 +242,7 @@ hardForkInitiationNoDRepsSpec ::
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
+  , TxOutAllocation era ~ Value era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 hardForkInitiationNoDRepsSpec =
@@ -269,7 +273,7 @@ hardForkInitiationNoDRepsSpec =
     getProtVer `shouldReturn` nextProtVer
 
 pparamPredictionSpec ::
-  ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) => SpecWith (ImpInit (LedgerSpec era))
 pparamPredictionSpec =
   it "futurePParams" $ do
     committeeMembers' <- registerInitialCommittee
@@ -291,7 +295,8 @@ pparamPredictionSpec =
     getProtVer `shouldReturn` nextProtVer
 
 noConfidenceSpec ::
-  forall era. ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
+  forall era.
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) => SpecWith (ImpInit (LedgerSpec era))
 noConfidenceSpec =
   it "NoConfidence" $ whenPostBootstrap $ do
     modifyPParams $ \pp ->
@@ -334,7 +339,7 @@ noConfidenceSpec =
     assertNoCommittee
 
 constitutionSpec ::
-  ConwayEraImp era =>
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 constitutionSpec =
   it "Constitution" $ do
@@ -403,7 +408,9 @@ constitutionSpec =
         enactState <- getEnactState
         rsEnactState pulserRatifyState `shouldBe` enactState
 
-actionPrioritySpec :: forall era. ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
+actionPrioritySpec ::
+  forall era.
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) => SpecWith (ImpInit (LedgerSpec era))
 actionPrioritySpec =
   describe "Competing proposals" $ do
     it "higher action priority wins" $ do
@@ -529,7 +536,8 @@ expectHardForkEvents actual expected =
           True
       | otherwise = False
 
-committeeSpec :: ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
+committeeSpec ::
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) => SpecWith (ImpInit (LedgerSpec era))
 committeeSpec =
   describe "Committee enactment" $ do
     it "Enact UpdateCommitee with lengthy lifetime" $ do

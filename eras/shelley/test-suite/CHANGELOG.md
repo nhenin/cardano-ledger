@@ -2,6 +2,8 @@
 
 ## 1.10.0.0
 
+* Require `TxOutAllocation era ~ Value era` for output and transaction generators
+  and examples, their callers, and the `HasTrace` instances for `LEDGER` and `LEDGERS`
 * Remove `TestingLedger`
 * Change constraints of `commonTests`, `Test.Cardano.Ledger.Shelley.Rules.Deleg.tests` and `delegTraceFromBlock`
 

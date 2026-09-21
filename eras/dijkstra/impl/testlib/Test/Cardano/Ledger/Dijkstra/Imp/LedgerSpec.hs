@@ -5,6 +5,8 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Dijkstra.Imp.LedgerSpec (spec) where
 
@@ -19,7 +21,9 @@ import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 
-spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
+spec ::
+  forall era.
+  (DijkstraEraImp era, TxOutAllocation era ~ Value era) => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "LEDGER" $ do
   describe "Spending sub-transaction outputs" $ do
     it "Fails when top-level transaction spends output from its own sub-transaction" $ do

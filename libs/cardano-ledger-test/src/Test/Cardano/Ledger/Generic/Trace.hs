@@ -10,6 +10,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -100,7 +101,7 @@ import Test.Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..), 
 --   has been applied. That model can be used to generate the next Tx
 genRsTxAndModel ::
   forall era.
-  EraGenericGen era =>
+  (EraGenericGen era, TxOutAllocation era ~ Value era) =>
   Int ->
   SlotNo ->
   GenRS era (Tx TopTx era)
@@ -112,7 +113,7 @@ genRsTxAndModel n slot = do
 -- | Generate a Vector of (StrictSeq (Tx era))  representing a (Vector Block)
 genRsTxSeq ::
   forall era.
-  EraGenericGen era =>
+  (EraGenericGen era, TxOutAllocation era ~ Value era) =>
   Int ->
   Int ->
   [(StrictSeq (Tx TopTx era), SlotNo)] ->
@@ -131,7 +132,7 @@ genRsTxSeq this lastN ans slot = do
 -- | Generate a Vector of Blocks, and an initial LedgerState
 genTxSeq ::
   forall era.
-  EraGenericGen era =>
+  (EraGenericGen era, TxOutAllocation era ~ Value era) =>
   GenSize -> -- Size of things the generated code should adhere to
   Int -> -- The number of Tx in the sequence
   GenRS era () -> -- An arbitrary 'initialization action', to run before we generate the sequence
@@ -370,6 +371,7 @@ genTrace ::
   ( HasTrace (MOCKCHAIN era) (Gen1 era)
   , EraGenericGen era
   , ShelleyEraAccounts era
+  , TxOutAllocation era ~ Value era
   ) =>
   Int ->
   GenSize ->
@@ -390,6 +392,7 @@ traceProp ::
   ( HasTrace (MOCKCHAIN era) (Gen1 era)
   , EraGenericGen era
   , ShelleyEraAccounts era
+  , TxOutAllocation era ~ Value era
   ) =>
   Int ->
   GenSize ->
@@ -405,6 +408,7 @@ forEachEpochTrace ::
   , HasTrace (MOCKCHAIN era) (Gen1 era)
   , EraGenericGen era
   , ShelleyEraAccounts era
+  , TxOutAllocation era ~ Value era
   ) =>
   Int ->
   GenSize ->
@@ -464,6 +468,7 @@ chainTest ::
   , Eq (StashedAVVMAddresses era)
   , EraGenericGen era
   , ShelleyEraAccounts era
+  , TxOutAllocation era ~ Value era
   ) =>
   Int ->
   GenSize ->
@@ -498,6 +503,7 @@ multiEpochTest ::
   ( HasTrace (MOCKCHAIN era) (Gen1 era)
   , EraGenericGen era
   , ShelleyEraAccounts era
+  , TxOutAllocation era ~ Value era
   ) =>
   Int ->
   GenSize ->

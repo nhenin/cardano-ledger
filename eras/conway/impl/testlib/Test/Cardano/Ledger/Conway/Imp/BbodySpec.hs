@@ -6,6 +6,8 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Conway.Imp.BbodySpec (spec) where
 
@@ -38,7 +40,7 @@ import Test.Cardano.Ledger.Plutus.Examples (alwaysFailsNoDatum, purposeIsWellfor
 
 spec ::
   forall era.
-  ConwayEraImp era => SpecWith (ImpInit (LedgerSpec era))
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "BBODY" $ do
   it "BodyRefScriptsSizeTooBig" $ do
     plutusScript <- mkPlutusScript @era $ purposeIsWellformedNoDatum SPlutusV2

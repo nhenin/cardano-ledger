@@ -204,7 +204,7 @@ dijkstraGenUnRegTxCert stakingCredential = do
   pure $ UnRegDepositTxCert stakingCredential deposit
 
 switchTxToLegacyMode ::
-  DijkstraEraImp era =>
+  (DijkstraEraImp era, TxOutAllocation era ~ Value era) =>
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)
 switchTxToLegacyMode tx = do
@@ -214,6 +214,7 @@ switchTxToLegacyMode tx = do
 dijkstraFixupTx ::
   ( HasCallStack
   , DijkstraEraImp era
+  , TxOutAllocation era ~ Value era
   ) =>
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)
@@ -238,6 +239,7 @@ detectLegacyMode tx = do
 fixupSubTransactions ::
   ( HasCallStack
   , DijkstraEraImp era
+  , TxOutAllocation era ~ Value era
   ) =>
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)
@@ -264,7 +266,7 @@ fixupSubTransactions tx = impAnn "fixupSubTransactions" $ do
           pure $ subTx & bodyTxL . inputsTxBodyL .~ Set.singleton newTxIn
 
 balanceSubTransactions ::
-  DijkstraEraImp era =>
+  (DijkstraEraImp era, TxOutAllocation era ~ Value era) =>
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)
 balanceSubTransactions topTx = do
@@ -284,7 +286,7 @@ balanceSubTransactions topTx = do
     Just b -> pure $ topTx & bodyTxL . subTransactionsTxBodyL %~ (OMap.|> b)
 
 mkBalancerSubTx ::
-  DijkstraEraImp era =>
+  (DijkstraEraImp era, TxOutAllocation era ~ Value era) =>
   -- | Cumulated consumed value by all sub-transactions
   Coin ->
   -- | Cumulated produced value by all sub-transactions

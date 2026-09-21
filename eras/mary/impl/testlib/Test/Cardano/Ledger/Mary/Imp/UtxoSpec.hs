@@ -4,6 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Mary.Imp.UtxoSpec (spec) where
 
@@ -22,7 +23,7 @@ import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Mary.ImpTest
 
 mintBasicToken ::
-  (HasCallStack, MaryEraImp era) => ImpTestM era (Tx TopTx era)
+  (HasCallStack, MaryEraImp era, TxOutAllocation era ~ Value era) => ImpTestM era (Tx TopTx era)
 mintBasicToken = do
   addr <- freshKeyAddr_
   keyHash <- freshKeyHash
@@ -40,6 +41,7 @@ mintBasicToken = do
 spec ::
   ( HasCallStack
   , MaryEraImp era
+  , TxOutAllocation era ~ Value era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXO" $ do

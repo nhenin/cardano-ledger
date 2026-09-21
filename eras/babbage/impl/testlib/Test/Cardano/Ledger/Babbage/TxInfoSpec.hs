@@ -6,6 +6,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Babbage.TxInfoSpec (txInfoSpec, spec) where
@@ -80,10 +81,10 @@ byronInput = mkTxInPartial genesisId 0
 unknownInput :: TxIn
 unknownInput = mkTxInPartial genesisId 1
 
-byronOutput :: forall era. EraTxOut era => TxOut era
+byronOutput :: forall era. (EraTxOut era, TxOutAllocation era ~ Value era) => TxOut era
 byronOutput = mkBasicTxOut exampleByronAddress (inject $ Coin 1)
 
-shelleyOutput :: forall era. EraTxOut era => TxOut era
+shelleyOutput :: forall era. (EraTxOut era, TxOutAllocation era ~ Value era) => TxOut era
 shelleyOutput = mkBasicTxOut shelleyAddr (inject $ Coin 2)
 
 datumEx :: forall era. Era era => Datum era
@@ -93,13 +94,16 @@ inlineDatumOutput ::
   forall era.
   ( BabbageEraTxOut era
   , Value era ~ MaryValue
+  , TxOutAllocation era ~ Value era
   ) =>
   TxOut era
 inlineDatumOutput =
   mkBasicTxOut shelleyAddr (inject $ Coin 3)
     & datumTxOutL .~ datumEx
 
-refScriptOutput :: forall l era. (BabbageEraTxOut era, EraPlutusTxInfo l era) => TxOut era
+refScriptOutput ::
+  forall l era.
+  (BabbageEraTxOut era, EraPlutusTxInfo l era, TxOutAllocation era ~ Value era) => TxOut era
 refScriptOutput =
   mkBasicTxOut shelleyAddr (inject $ Coin 3)
     & referenceScriptTxOutL .~ SJust (alwaysSucceeds @l 3)
@@ -120,6 +124,7 @@ exampleUTxO ::
   ( BabbageEraTxOut era
   , EraPlutusTxInfo l era
   , Value era ~ MaryValue
+  , TxOutAllocation era ~ Value era
   ) =>
   UTxO era
 exampleUTxO =
@@ -153,7 +158,9 @@ txBare ::
   Tx TopTx era
 txBare i o = mkBasicTx (txb i Nothing o)
 
-txRefInput :: forall era. (EraTx era, BabbageEraTxBody era) => TxIn -> Tx TopTx era
+txRefInput ::
+  forall era.
+  (EraTx era, BabbageEraTxBody era, TxOutAllocation era ~ Value era) => TxIn -> Tx TopTx era
 txRefInput refInput = mkBasicTx (txb shelleyInput (Just refInput) shelleyOutput)
 
 hasReferenceInput :: SLanguage l -> PlutusTxInfo l -> Expectation
@@ -198,6 +205,7 @@ successfulTranslation ::
   ( BabbageEraTxOut era
   , EraPlutusTxInfo l era
   , Value era ~ MaryValue
+  , TxOutAllocation era ~ Value era
   ) =>
   SLanguage l ->
   Tx TopTx era ->
@@ -222,6 +230,7 @@ expectTranslationError ::
   ( BabbageEraTxOut era
   , EraPlutusTxInfo l era
   , Value era ~ MaryValue
+  , TxOutAllocation era ~ Value era
   ) =>
   SLanguage l ->
   Tx TopTx era ->
@@ -256,6 +265,7 @@ translatedOutputEx1 ::
   ( BabbageEraTxOut era
   , Value era ~ MaryValue
   , EraPlutusTxInfo l era
+  , TxOutAllocation era ~ Value era
   ) =>
   PlutusTxOut l
 translatedOutputEx1 =
@@ -267,6 +277,7 @@ translatedOutputEx2 ::
   ( BabbageEraTxOut era
   , EraPlutusTxInfo 'PlutusV2 era
   , EraPlutusTxInfo l era
+  , TxOutAllocation era ~ Value era
   ) =>
   PlutusTxOut l
 translatedOutputEx2 =
@@ -280,6 +291,7 @@ txInfoSpecV1 ::
   , Value era ~ MaryValue
   , EraPlutusTxInfo 'PlutusV1 era
   , Inject (BabbageContextError era) (ContextError era)
+  , TxOutAllocation era ~ Value era
   ) =>
   Spec
 txInfoSpecV1 =
@@ -320,6 +332,7 @@ txInfoSpec ::
   , Inject (BabbageContextError era) (ContextError era)
   , Show (PlutusTxInInfo era l)
   , Eq (PlutusTxInInfo era l)
+  , TxOutAllocation era ~ Value era
   ) =>
   SLanguage l ->
   Spec
@@ -382,6 +395,7 @@ spec ::
   , Inject (BabbageContextError era) (ContextError era)
   , EraPlutusTxInfo 'PlutusV1 era
   , EraPlutusTxInfo 'PlutusV2 era
+  , TxOutAllocation era ~ Value era
   ) =>
   Spec
 spec =

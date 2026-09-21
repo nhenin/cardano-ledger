@@ -79,8 +79,8 @@ getConsumedDijkstraValue ::
   forall era l.
   ( DijkstraEraTxBody era
   , EraUTxO era
-  , Value era ~ MaryValue
   , STxLevel l era ~ STxBothLevels l era
+  , Value era ~ MaryValue
   ) =>
   PParams era ->
   (Credential Staking -> Maybe Coin) ->

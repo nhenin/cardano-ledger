@@ -32,7 +32,6 @@ import Cardano.Ledger.Allegra.Scripts (
 import Cardano.Ledger.Alonzo (AlonzoTxAuxData, MaryValue)
 import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..), unTxDats)
-import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
@@ -51,6 +50,7 @@ import Cardano.Ledger.Dijkstra.Scripts (
   DijkstraPlutusPurpose (..),
   pattern RequireGuard,
  )
+import Cardano.Ledger.Dijkstra.TxOut (DijkstraTxOut (..))
 import Cardano.Ledger.HKD (HKD)
 import Cardano.Ledger.Plutus.CostModels (CostModels, costModelsValid)
 import Cardano.Ledger.Plutus.Data (BinaryData, Data, Datum (..), hashBinaryData)
@@ -212,10 +212,10 @@ instance SpecTranslate DijkstraEra (AlonzoScript DijkstraEra) where
   toSpecRep (NativeScript s) = Left <$> toSpecRep s
   toSpecRep (PlutusScript s) = Right <$> toSpecRep s
 
-instance SpecTranslate DijkstraEra (BabbageTxOut DijkstraEra) where
-  type SpecRep DijkstraEra (BabbageTxOut DijkstraEra) = Agda.TxOut
+instance SpecTranslate DijkstraEra DijkstraTxOut where
+  type SpecRep DijkstraEra DijkstraTxOut = Agda.TxOut
 
-  toSpecRep (BabbageTxOut addr val datum script) = do
+  toSpecRep (DijkstraTxOut addr val datum script) = do
     addr' <- toSpecRep addr
     val' <- toSpecRep val
     datum' <- toSpecRep datum

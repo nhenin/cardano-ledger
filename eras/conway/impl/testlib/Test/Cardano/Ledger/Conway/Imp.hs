@@ -43,6 +43,7 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   ( ConwayEraImp era
+  , TxOutAllocation era ~ Value era
   , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era

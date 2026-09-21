@@ -4,6 +4,8 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Shelley.UnitTests.InstantStakeTest (spec) where
 
@@ -36,7 +38,10 @@ arbitraryLens l b = (l .~ b) <$> arbitrary
 
 -- ===========================================
 
-instantStakeIncludesRewards :: forall era. ShelleyEraImp era => Gen Property
+instantStakeIncludesRewards ::
+  forall era.
+  (ShelleyEraImp era, TxOutAllocation era ~ Value era) =>
+  Gen Property
 instantStakeIncludesRewards = do
   (pool1, pool2) <- arbitrary @(TupleN 2 StakePoolParams)
   let
@@ -118,5 +123,5 @@ instantStakeIncludesRewards = do
 
   pure (computedStakeDistr === expectedStakeDistr)
 
-spec :: forall era. ShelleyEraImp era => Spec
+spec :: forall era. (ShelleyEraImp era, TxOutAllocation era ~ Value era) => Spec
 spec = prop "InstantStakeIncludesRewards" (instantStakeIncludesRewards @era)

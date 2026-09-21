@@ -61,7 +61,7 @@ import Cardano.Ledger.Block (Block, EraBlockHeader)
 import Cardano.Ledger.Conway.Core
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Internal.Era (DijkstraEra)
-import Cardano.Ledger.Mary (MaryValue)
+import Cardano.Ledger.Mary.Value (MaryValue)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Lens.Micro
 

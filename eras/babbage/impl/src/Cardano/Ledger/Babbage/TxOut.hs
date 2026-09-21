@@ -40,6 +40,7 @@ module Cardano.Ledger.Babbage.TxOut (
   babbageMinUTxOValue,
   getEitherAddrBabbageTxOut,
   internBabbageTxOut,
+  upgradeAlonzoTxOut,
 ) where
 
 import Cardano.Base.Typeable (TypeName (TypeName))
@@ -219,7 +220,7 @@ instance EraTxOut BabbageEra where
 
   mkBasicTxOut addr vl = BabbageTxOut addr vl NoDatum SNothing
 
-  upgradeTxOut = upgradeAlonzoTxOut
+  upgradeTxOut _ = upgradeAlonzoTxOut
 
   addrEitherTxOutL = addrEitherBabbageTxOutL
   {-# INLINE addrEitherTxOutL #-}

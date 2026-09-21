@@ -138,6 +138,7 @@ spendingPurpose1 = SpendingPurpose . AsIxItem 1 $ mkGenesisTxIn 1
 validatingTx ::
   forall era.
   ( AlonzoEraTxWits era
+  , TxOutAllocation era ~ Value era
   , AlonzoEraTxBody era
   , EraModel era
   , EraPlutusTxInfo PlutusV1 era

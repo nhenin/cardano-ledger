@@ -8,6 +8,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | The example transactions in this module are not valid transactions. We
@@ -155,6 +156,7 @@ exampleShelleyTx =
 mkShelleyBasedLedgerExamples ::
   forall era.
   ( EraTx era
+  , TxOutAllocation era ~ Value era
   , EraGov era
   , EraStake era
   , EraCertState era
@@ -202,6 +204,7 @@ mkShelleyBasedLedgerExamples
 exampleNewEpochState ::
   forall era.
   ( EraTxOut era
+  , TxOutAllocation era ~ Value era
   , EraGov era
   , EraStake era
   , EraCertState era
@@ -330,6 +333,7 @@ exampleCoin = Coin 10
 exampleShelleyBasedTx ::
   forall era l.
   ( EraTx era
+  , TxOutAllocation era ~ Value era
   , ShelleyEraScript era
   , Typeable l
   ) =>

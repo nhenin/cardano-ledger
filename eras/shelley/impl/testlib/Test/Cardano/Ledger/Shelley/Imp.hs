@@ -7,7 +7,7 @@
 
 module Test.Cardano.Ledger.Shelley.Imp (spec, shelleyToBabbageSpec) where
 
-import Cardano.Ledger.Core (EraRule)
+import Cardano.Ledger.Core (EraRule, EraTxOut (TxOutAllocation), Value)
 import Cardano.Ledger.Shelley.Rules (RupdEvent)
 import Cardano.Ledger.Shelley.State (ShelleyEraAccounts)
 import Control.State.Transition (Event)
@@ -24,6 +24,7 @@ import qualified Test.Cardano.Ledger.Shelley.UnitTests.InstantStakeTest as Insta
 spec ::
   forall proxy era.
   ( ShelleyEraImp era
+  , TxOutAllocation era ~ Value era
   , Event (EraRule "RUPD" era) ~ RupdEvent
   ) =>
   proxy era ->

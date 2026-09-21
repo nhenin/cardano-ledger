@@ -7,6 +7,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -45,6 +46,7 @@ spec ::
   ( ConwayEraImp era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
+  , TxOutAllocation era ~ Value era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "EPOCH" $ do
@@ -141,7 +143,7 @@ proposalsSpec =
 
 dRepSpec ::
   forall era.
-  ConwayEraImp era =>
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 dRepSpec =
   describe "DRep" $ do
@@ -346,7 +348,7 @@ dRepSpec =
 
 dRepVotingSpec ::
   forall era.
-  ConwayEraImp era =>
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 dRepVotingSpec =
   describe "DRep" $ do
@@ -393,7 +395,7 @@ dRepVotingSpec =
 
 treasurySpec ::
   forall era.
-  ConwayEraImp era =>
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 treasurySpec =
   -- Treasury withdrawal are disallowed during bootstrap,
@@ -418,7 +420,7 @@ treasurySpec =
 
 treasuryWithdrawalExpectation ::
   forall era.
-  (HasCallStack, ConwayEraImp era) =>
+  (HasCallStack, ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   [GovAction era] ->
   ImpTestM era ()
 treasuryWithdrawalExpectation extraWithdrawals = do
@@ -491,6 +493,7 @@ eventsSpec ::
   ( ConwayEraImp era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
+  , TxOutAllocation era ~ Value era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 eventsSpec = describe "Events" $ do

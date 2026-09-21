@@ -2,6 +2,8 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Dijkstra.Imp.CertSpec (spec) where
 
@@ -17,7 +19,9 @@ import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Dijkstra.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 
-spec :: forall era. DijkstraEraImp era => SpecWith (ImpInit (LedgerSpec era))
+spec ::
+  forall era.
+  (DijkstraEraImp era, TxOutAllocation era ~ Value era) => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "CERT" $ do
   xit "Subtransaction consumes correct refund after keyDeposit is changed" $ do
     stakingCred <- KeyHashObj <$> freshKeyHash

@@ -2,8 +2,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Mary.TxOut (scaledMinDeposit) where
+module Cardano.Ledger.Mary.TxOut (scaledMinDeposit, upgradeAllegraTxOut) where
 
+import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
@@ -22,7 +23,7 @@ instance EraTxOut MaryEra where
 
   mkBasicTxOut = ShelleyTxOut
 
-  upgradeTxOut (TxOutCompact addr cfval) = TxOutCompact (coerce addr) (injectCompact cfval)
+  upgradeTxOut _ = upgradeAllegraTxOut
 
   addrEitherTxOutL = addrEitherShelleyTxOutL
   {-# INLINE addrEitherTxOutL #-}
@@ -31,6 +32,10 @@ instance EraTxOut MaryEra where
   {-# INLINE valueEitherTxOutL #-}
 
   getMinCoinTxOut pp txOut = scaledMinDeposit (txOut ^. valueTxOutL) (pp ^. ppMinUTxOValueL)
+
+-- | Upgrade an Allegra output by embedding its coins in a multi-asset value.
+upgradeAllegraTxOut :: ShelleyTxOut AllegraEra -> ShelleyTxOut MaryEra
+upgradeAllegraTxOut (TxOutCompact addr cfval) = TxOutCompact (coerce addr) (injectCompact cfval)
 
 -- | The `scaledMinDeposit` calculation uses the minUTxOValue protocol parameter
 -- (passed to it as Coin mv) as a specification of "the cost of making a

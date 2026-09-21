@@ -29,6 +29,7 @@ import Test.Cardano.Ledger.Imp.Common
 spec ::
   ( BabbageEraImp era
   , Event (EraRule "RUPD" era) ~ Shelley.RupdEvent
+  , TxOutAllocation era ~ Value era
   ) =>
   proxy era ->
   Spec
@@ -43,6 +44,7 @@ babbageOnlySpec ::
   ( BabbageEraImp era
   , ShelleyEraAccounts era
   , Event (EraRule "NEWEPOCH" era) ~ Shelley.ShelleyNewEpochEvent era
+  , TxOutAllocation era ~ Value era
   ) =>
   proxy era ->
   Spec

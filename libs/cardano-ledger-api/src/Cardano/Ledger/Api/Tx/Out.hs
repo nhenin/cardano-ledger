@@ -37,6 +37,7 @@ module Cardano.Ledger.Api.Tx.Out (
   EraTxOut (TxOut),
   mkBasicTxOut,
   upgradeTxOut,
+  RecoverCapacityDeposit,
 
   -- * Any Era
   AnyEraTxOut (..),
@@ -87,6 +88,7 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Core (
   EraTxOut (..),
   PParams,
+  RecoverCapacityDeposit,
   bootAddrTxOutF,
   coinTxOutL,
   isAdaOnlyTxOutF,

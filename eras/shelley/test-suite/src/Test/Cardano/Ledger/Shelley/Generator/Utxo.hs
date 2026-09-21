@@ -106,6 +106,7 @@ import qualified Test.QuickCheck as QC
 genTx ::
   forall era c.
   ( EraGen era
+  , TxOutAllocation era ~ Value era
   , EraUTxO era
   , ShelleyEraAccounts era
   , Embed (EraRule "DELPL" era) (CERTS era)
@@ -310,6 +311,7 @@ instance
 deltaZero ::
   forall era.
   ( EraTxOut era
+  , TxOutAllocation era ~ Value era
   , Monoid (TxWits era)
   ) =>
   Coin ->
@@ -464,6 +466,7 @@ genNextDelta
 genNextDeltaTilFixPoint ::
   forall era c.
   ( EraGen era
+  , TxOutAllocation era ~ Value era
   , EraUTxO era
   ) =>
   ScriptInfo era ->
@@ -541,7 +544,7 @@ fix n f d = do d1 <- f n d; if d1 == d then pure d else fix (n + 1) f d1
 
 converge ::
   forall era c.
-  (EraGen era, EraUTxO era) =>
+  (EraGen era, TxOutAllocation era ~ Value era, EraUTxO era) =>
   ScriptInfo era ->
   Coin ->
   [KeyPair Witness] ->
@@ -689,6 +692,7 @@ mkTxWits
 calcOutputsFromBalance ::
   forall era.
   ( EraTxOut era
+  , TxOutAllocation era ~ Value era
   , Split (Value era)
   ) =>
   Value era ->

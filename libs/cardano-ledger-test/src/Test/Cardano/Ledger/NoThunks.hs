@@ -6,12 +6,14 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.NoThunks (
   test,
 ) where
 
-import Cardano.Ledger.Conway.Core (Era (..))
+import Cardano.Ledger.Conway.Core (Era (..), TxOutAllocation, Value)
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
 import Cardano.Ledger.Shelley.State
 import NoThunks.Class (NoThunks)
@@ -44,6 +46,7 @@ test =
       , EraGenericGen era
       , ShelleyEraAccounts era
       , NoThunks (StashedAVVMAddresses era)
+      , TxOutAllocation era ~ Value era
       ) =>
       Spec
     f = testThunks @era 100 defaultGenSize
@@ -54,6 +57,7 @@ testThunks ::
   , EraGenericGen era
   , NoThunks (StashedAVVMAddresses era)
   , ShelleyEraAccounts era
+  , TxOutAllocation era ~ Value era
   ) =>
   Int ->
   GenSize ->

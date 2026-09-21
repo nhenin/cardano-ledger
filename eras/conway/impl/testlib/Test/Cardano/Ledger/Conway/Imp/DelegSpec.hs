@@ -7,6 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Conway.Imp.DelegSpec (
   spec,
@@ -53,7 +54,7 @@ import Test.Cardano.Ledger.Plutus.Examples (evenRedeemerNoDatum)
 
 spec ::
   forall era.
-  ConwayEraImp era =>
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "DELEG" $ do
   describe "Register stake credential" $ do

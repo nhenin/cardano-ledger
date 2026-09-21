@@ -5,6 +5,8 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Conway.Imp.RatifySpec (spec) where
 
@@ -37,7 +39,7 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   forall era.
-  (HasCallStack, ConwayEraImp era) =>
+  (HasCallStack, ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "RATIFY" $ do
   votingSpec
@@ -69,7 +71,7 @@ spec = describe "RATIFY" $ do
 
 initiateHardForkWithLessThanMinimalCommitteeSize ::
   forall era.
-  (HasCallStack, ConwayEraImp era) =>
+  (HasCallStack, ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 initiateHardForkWithLessThanMinimalCommitteeSize =
   it "Hard Fork can still be initiated with less than minimal committee size" $ do
@@ -97,7 +99,7 @@ initiateHardForkWithLessThanMinimalCommitteeSize =
 
 spoAndCCVotingSpec ::
   forall era.
-  (HasCallStack, ConwayEraImp era) =>
+  (HasCallStack, ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 spoAndCCVotingSpec = do
   describe "When CC expired" $ do
@@ -344,7 +346,7 @@ spoAndCCVotingSpec = do
 
 committeeExpiryResignationDiscountSpec ::
   forall era.
-  (HasCallStack, ConwayEraImp era) =>
+  (HasCallStack, ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 committeeExpiryResignationDiscountSpec =
   -- Committee-update proposals are disallowed during bootstrap, so we can only run these tests post-bootstrap
@@ -416,7 +418,7 @@ committeeExpiryResignationDiscountSpec =
 
 paramChangeAffectsProposalsSpec ::
   forall era.
-  (HasCallStack, ConwayEraImp era) =>
+  (HasCallStack, ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 paramChangeAffectsProposalsSpec =
   -- These tests rely on submitting committee-update proposals and on drep votes, which are disallowed during bootstrap,
@@ -594,7 +596,7 @@ paramChangeAffectsProposalsSpec =
 
 committeeMinSizeAffectsInFlightProposalsSpec ::
   forall era.
-  (HasCallStack, ConwayEraImp era) =>
+  (HasCallStack, ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 committeeMinSizeAffectsInFlightProposalsSpec =
   -- Treasury withdrawals are disallowed during bootstrap, so we can only run these tests post-bootstrap
@@ -661,7 +663,7 @@ committeeMinSizeAffectsInFlightProposalsSpec =
 
 spoVotesForHardForkInitiation ::
   forall era.
-  (HasCallStack, ConwayEraImp era) =>
+  (HasCallStack, ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 spoVotesForHardForkInitiation =
   describe "Counting of SPO votes" $ do
@@ -699,7 +701,7 @@ spoVotesForHardForkInitiation =
 
 votingSpec ::
   forall era.
-  (HasCallStack, ConwayEraImp era) =>
+  (HasCallStack, ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 votingSpec =
   describe "Voting" $ do
@@ -1601,7 +1603,7 @@ votingSpec =
 
 delayingActionsSpec ::
   forall era.
-  (HasCallStack, ConwayEraImp era) =>
+  (HasCallStack, ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 delayingActionsSpec =
   -- All tests below are relying on submitting constitution of committe-update proposals, which are disallowed during bootstrap,
@@ -1822,7 +1824,7 @@ delayingActionsSpec =
 
 committeeMaxTermLengthSpec ::
   forall era.
-  (HasCallStack, ConwayEraImp era) =>
+  (HasCallStack, ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 committeeMaxTermLengthSpec =
   -- Committee-update proposals are disallowed during bootstrap, so we can only run these tests post-bootstrap

@@ -6,6 +6,8 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Babbage.Imp.UtxosSpec (spec) where
 
@@ -36,6 +38,8 @@ import Cardano.Ledger.BaseTypes (ProtVer (..), TxIx (..), inject, natVersion)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Core (
   ProtVerHigh,
+  TxOutAllocation,
+  Value,
   bodyTxL,
   eraProtVerHigh,
   eraProtVerLow,
@@ -65,7 +69,9 @@ import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples
 
-spec :: forall era. BabbageEraImp era => SpecWith (ImpInit (LedgerSpec era))
+spec ::
+  forall era.
+  (BabbageEraImp era, TxOutAllocation era ~ Value era) => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXOS" $ do
   describe "PlutusV1 with references" $ do
     let inBabbage = eraProtVerLow @era <= eraProtVerHigh @BabbageEra

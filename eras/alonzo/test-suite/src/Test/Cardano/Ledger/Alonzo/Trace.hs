@@ -68,6 +68,7 @@ instance
   , Crypto c
   , EraRuleFailure "LEDGER" era ~ Shelley.ShelleyLedgerPredFailure era
   , EraRule "LEDGER" era ~ LEDGER era
+  , TxOutAllocation era ~ Value era
   ) =>
   TQC.HasTrace (LEDGER era) (GenEnv c era)
   where
@@ -110,6 +111,7 @@ instance
   , Embed (EraRule "DELEG" era) (Shelley.DELPL era)
   , Embed (EraRule "LEDGER" era) (LEDGERS era)
   , AtMostEra "Babbage" era
+  , TxOutAllocation era ~ Value era
   ) =>
   TQC.HasTrace (LEDGERS era) (GenEnv c era)
   where

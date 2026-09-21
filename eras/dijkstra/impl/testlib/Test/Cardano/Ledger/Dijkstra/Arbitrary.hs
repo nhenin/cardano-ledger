@@ -26,6 +26,7 @@ import Cardano.Ledger.Allegra.Scripts (
  )
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.Binary (Sized, mkSized)
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Dijkstra (ApplyTxError (DijkstraApplyTxError), DijkstraEra)
 import Cardano.Ledger.Dijkstra.BlockBody (PerasCert (..))
@@ -42,6 +43,7 @@ import Cardano.Ledger.Dijkstra.Tx (DijkstraTx (..), Tx (..))
 import Cardano.Ledger.Dijkstra.TxBody (TxBody (..))
 import Cardano.Ledger.Dijkstra.TxCert
 import Cardano.Ledger.Dijkstra.TxInfo (DijkstraContextError)
+import Cardano.Ledger.Dijkstra.TxOut (DijkstraTxOut, fromBabbageTxOut)
 import Cardano.Ledger.Plutus (Language (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
@@ -56,6 +58,12 @@ import Test.Cardano.Ledger.Alonzo.Arbitrary (genValidCostModel)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Arbitrary (sizedNativeScriptGens)
+
+instance Arbitrary DijkstraTxOut where
+  arbitrary = fromBabbageTxOut <$> arbitrary
+
+instance Arbitrary (Sized DijkstraTxOut) where
+  arbitrary = mkSized (eraProtVerHigh @DijkstraEra) <$> arbitrary
 
 instance Arbitrary (DijkstraPParams Identity DijkstraEra) where
   arbitrary = genericArbitraryU

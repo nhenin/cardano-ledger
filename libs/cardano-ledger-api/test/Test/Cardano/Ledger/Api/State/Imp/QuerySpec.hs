@@ -6,6 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Api.State.Imp.QuerySpec where
 
@@ -28,6 +29,7 @@ import Cardano.Ledger.Conway.Governance (
   Voter (StakePoolVoter),
  )
 import Cardano.Ledger.Conway.PParams (ppDRepActivityL)
+import Cardano.Ledger.Core (TxOutAllocation, Value)
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -43,7 +45,7 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   forall era.
-  ConwayEraImp era =>
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   Spec
 spec = withImpInitEachEraVersion (Proxy @era) $ do
   describe "DRep" $ do

@@ -12,6 +12,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
@@ -44,6 +45,7 @@ import Cardano.Ledger.Core (
   EraTx (..),
   EraTxBody (..),
   EraTxWits (..),
+  Value,
   hashScript,
  )
 import Cardano.Ledger.Hashes (hashAnnotated)
@@ -81,6 +83,7 @@ tests =
 testEstimateMinFee ::
   forall era.
   ( Reflect era
+  , TxOutAllocation era ~ Value era
   , AlonzoEraTxWits era
   , AlonzoEraTxBody era
   , EraModel era

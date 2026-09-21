@@ -6,6 +6,8 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Babbage.Imp.UtxoSpec (spec) where
 
@@ -33,6 +35,7 @@ spec ::
   ( AlonzoEraImp era
   , BabbageEraTxBody era
   , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
+  , TxOutAllocation era ~ Value era
   ) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "UTXO" $ do

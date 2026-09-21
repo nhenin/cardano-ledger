@@ -9,6 +9,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Conway.Imp.GovSpec (spec) where
 
@@ -45,7 +46,7 @@ import Test.Cardano.Ledger.Imp.Common hiding (Success)
 
 spec ::
   forall era.
-  ConwayEraImp era =>
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "GOV" $ do
   constitutionSpec
@@ -62,7 +63,7 @@ spec = describe "GOV" $ do
 
 unknownCostModelsSpec ::
   forall era.
-  ConwayEraImp era =>
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 unknownCostModelsSpec =
   describe "Unknown CostModels" $ do
@@ -237,7 +238,7 @@ pparamUpdateSpec =
 
 proposalsSpec ::
   forall era.
-  ConwayEraImp era =>
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 proposalsSpec = do
   describe "Proposals" $ do
@@ -741,7 +742,7 @@ proposalsSpec = do
 
 votingSpec ::
   forall era.
-  ConwayEraImp era =>
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 votingSpec =
   describe "Voting" $ do
@@ -895,7 +896,7 @@ votingSpec =
 
 constitutionSpec ::
   forall era.
-  ConwayEraImp era =>
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 constitutionSpec =
   describe "Constitution proposals" $ do
@@ -976,7 +977,7 @@ constitutionSpec =
 
 policySpec ::
   forall era.
-  ConwayEraImp era =>
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 policySpec =
   describe "Policy" $ do
@@ -1244,7 +1245,7 @@ secondHardForkCantFollowMajor = do
 
 ccVoteOnConstitutionFailsWithMultipleVotes ::
   forall era.
-  (HasCallStack, ConwayEraImp era) =>
+  (HasCallStack, ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   ImpTestM era ()
 ccVoteOnConstitutionFailsWithMultipleVotes = do
   (ccCred :| _) <- registerInitialCommittee
@@ -1283,7 +1284,7 @@ ccVoteOnConstitutionFailsWithMultipleVotes = do
 
 bootstrapPhaseSpec ::
   forall era.
-  ConwayEraImp era =>
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 bootstrapPhaseSpec =
   describe "Proposing and voting" $ do

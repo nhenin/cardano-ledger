@@ -6,6 +6,8 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Invalid (spec, alonzoToConwaySpec) where
 
@@ -51,7 +53,9 @@ import Test.Cardano.Ledger.Plutus.Examples (
   redeemerSameAsDatum,
  )
 
-spec :: forall era. AlonzoEraImp era => SpecWith (ImpInit (LedgerSpec era))
+spec ::
+  forall era.
+  (AlonzoEraImp era, TxOutAllocation era ~ Value era) => SpecWith (ImpInit (LedgerSpec era))
 spec = describe "Invalid transactions" $ do
   it "Phase 1 script failure" $ do
     -- Script will be invalid because slot 100 will be in the future

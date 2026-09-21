@@ -103,6 +103,7 @@ exampleBabbageNewEpochState ::
   , EraUTxO era
   , Value era ~ MaryValue
   , Default (StashedAVVMAddresses era)
+  , TxOutAllocation era ~ Value era
   ) =>
   NewEpochState era
 exampleBabbageNewEpochState =
@@ -118,6 +119,7 @@ exampleBabbageBasedTopTx ::
   , Value era ~ MaryValue
   , EraPlutusTxInfo PlutusV1 era
   , EraPlutusTxInfo PlutusV2 era
+  , TxOutAllocation era ~ Value era
   ) =>
   Tx TopTx era
 exampleBabbageBasedTopTx =
@@ -133,6 +135,7 @@ exampleBabbageBasedTx ::
   , EraPlutusTxInfo PlutusV1 era
   , EraPlutusTxInfo PlutusV2 era
   , Typeable l
+  , TxOutAllocation era ~ Value era
   ) =>
   Tx l era
 exampleBabbageBasedTx =
@@ -144,6 +147,7 @@ addBabbageBasedTopTxFeatures ::
   ( AlonzoEraTx era
   , BabbageEraTxBody era
   , Value era ~ MaryValue
+  , TxOutAllocation era ~ Value era
   ) =>
   Tx TopTx era ->
   Tx TopTx era
@@ -159,6 +163,7 @@ addBabbageBasedTxFeatures ::
   , Value era ~ MaryValue
   , EraPlutusTxInfo PlutusV1 era
   , EraPlutusTxInfo PlutusV2 era
+  , TxOutAllocation era ~ Value era
   ) =>
   Tx l era ->
   Tx l era
@@ -197,6 +202,7 @@ addBabbageBasedTxFeatures tx =
 exampleCollateralOutput ::
   ( BabbageEraTxOut era
   , Value era ~ MaryValue
+  , TxOutAllocation era ~ Value era
   ) =>
   TxOut era
 exampleCollateralOutput =

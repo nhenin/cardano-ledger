@@ -55,6 +55,7 @@ utxoWithTx ::
   , BabbageEraTxOut era
   , Arbitrary (Value era)
   , Arbitrary (Script era)
+  , TxOutAllocation era ~ Value era
   ) =>
   SupportedLanguage era ->
   Tx TopTx era ->
@@ -89,6 +90,7 @@ genTxOut ::
   ( BabbageEraTxOut era
   , Arbitrary (Value era)
   , Arbitrary (Script era)
+  , TxOutAllocation era ~ Value era
   ) =>
   SupportedLanguage era ->
   Gen (TxOut era)

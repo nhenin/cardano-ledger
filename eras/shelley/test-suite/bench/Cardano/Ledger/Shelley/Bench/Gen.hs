@@ -101,6 +101,7 @@ genBlock ge cs = generate $ GenBlock.genBlock ge cs
 
 genTriple ::
   ( EraGen era
+  , TxOutAllocation era ~ Value era
   , EraGov era
   , EraStake era
   , EraUTxO era

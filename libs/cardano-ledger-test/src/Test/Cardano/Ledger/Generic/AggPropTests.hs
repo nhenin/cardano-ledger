@@ -6,6 +6,8 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Generic.AggPropTests where
 
@@ -93,6 +95,7 @@ aggUTxO ::
   ( HasTrace (MOCKCHAIN era) (Gen1 era)
   , EraGenericGen era
   , ShelleyEraAccounts era
+  , TxOutAllocation era ~ Value era
   ) =>
   Proof era ->
   Gen Property
@@ -117,6 +120,7 @@ forAllChainTrace ::
   , HasTrace (MOCKCHAIN era) (Gen1 era)
   , EraGenericGen era
   , ShelleyEraAccounts era
+  , TxOutAllocation era ~ Value era
   ) =>
   Int -> (Trace (MOCKCHAIN era) -> prop) -> Property
 forAllChainTrace n propf =
@@ -160,6 +164,7 @@ depositEra ::
   ( HasTrace (MOCKCHAIN era) (Gen1 era)
   , EraGenericGen era
   , ShelleyEraAccounts era
+  , TxOutAllocation era ~ Value era
   ) =>
   Spec
 depositEra =

@@ -32,6 +32,7 @@ import Test.Cardano.Ledger.Shelley.ImpTest
 spec ::
   forall era.
   ( ShelleyEraImp era
+  , TxOutAllocation era ~ Value era
   , Event (EraRule "RUPD" era) ~ RupdEvent
   ) =>
   SpecWith (ImpInit (LedgerSpec era))

@@ -91,6 +91,7 @@ genTxAndUTXOState ::
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , StAnnTx TopTx era ~ Signal (EraRule "UTXOW" era)
   , EraGenericGen era
+  , TxOutAllocation era ~ Value era
   ) =>
   GenSize -> Gen (TRC (EraRule "UTXOW" era), GenState era)
 genTxAndUTXOState gsize = do
@@ -104,6 +105,7 @@ genTxAndLEDGERState ::
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ Shelley.LedgerEnv era
   , EraGenericGen era
+  , TxOutAllocation era ~ Value era
   ) =>
   GenSize ->
   Gen (TRC (EraRule "LEDGER" era), GenState era)
@@ -193,6 +195,7 @@ adaIsPreserved ::
   ( HasTrace (MOCKCHAIN era) (Gen1 era)
   , EraGenericGen era
   , ShelleyEraAccounts era
+  , TxOutAllocation era ~ Value era
   ) =>
   Int ->
   GenSize ->
@@ -224,6 +227,7 @@ incrementStakeInvariant ::
   ( HasTrace (MOCKCHAIN era) (Gen1 era)
   , EraGenericGen era
   , ShelleyEraAccounts era
+  , TxOutAllocation era ~ Value era
   ) =>
   GenSize ->
   Spec
@@ -290,6 +294,7 @@ adaIsPreservedInEachEpoch ::
   , ToExpr (PredicateFailure (EraRule "LEDGER" era))
   , Ord (PredicateFailure (EraRule "LEDGER" era))
   , Show (PredicateFailure (EraRule "LEDGER" era))
+  , TxOutAllocation era ~ Value era
   ) =>
   GenSize ->
   Spec

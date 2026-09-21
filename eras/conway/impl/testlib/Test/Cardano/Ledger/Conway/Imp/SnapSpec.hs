@@ -3,6 +3,8 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Conway.Imp.SnapSpec (spec, conwayOnlySpec) where
 
@@ -22,7 +24,7 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   forall era.
-  ConwayEraImp era =>
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 spec = describe "SNAP" $ do
   let getSpoVotingStake :: KeyHash StakePool -> ImpTestM era Coin
@@ -49,7 +51,7 @@ spec = describe "SNAP" $ do
 
 conwayOnlySpec ::
   forall era.
-  ConwayEraImp era =>
+  (ConwayEraImp era, TxOutAllocation era ~ Value era) =>
   SpecWith (ImpInit (LedgerSpec era))
 conwayOnlySpec = describe "SNAP" $ do
   let getSpoVotingStake :: KeyHash StakePool -> ImpTestM era Coin

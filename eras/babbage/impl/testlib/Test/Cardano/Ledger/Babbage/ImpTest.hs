@@ -6,6 +6,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -72,6 +73,7 @@ babbageFixupTx ::
   ( HasCallStack
   , AlonzoEraImp era
   , BabbageEraTxBody era
+  , TxOutAllocation era ~ Value era
   ) =>
   Tx TopTx era ->
   ImpTestM era (Tx TopTx era)
@@ -126,7 +128,7 @@ instance AlonzoEraImp BabbageEra where
   scriptTestContexts = plutusTestScripts SPlutusV1 <> plutusTestScripts SPlutusV2
 
 produceRefScript ::
-  (ShelleyEraImp era, BabbageEraTxOut era) =>
+  (ShelleyEraImp era, BabbageEraTxOut era, TxOutAllocation era ~ Value era) =>
   Script era ->
   ImpTestM era TxIn
 produceRefScript script = do
@@ -134,7 +136,7 @@ produceRefScript script = do
   pure txIn
 
 produceRefScripts ::
-  (ShelleyEraImp era, BabbageEraTxOut era) =>
+  (ShelleyEraImp era, BabbageEraTxOut era, TxOutAllocation era ~ Value era) =>
   NonEmpty (Script era) ->
   ImpTestM era (NonEmpty TxIn)
 produceRefScripts scripts = do
@@ -142,7 +144,7 @@ produceRefScripts scripts = do
   pure $ NE.zipWith (\_ -> mkTxInPartial txId) scripts (0 :| [1 ..])
 
 produceRefScriptsTx ::
-  (ShelleyEraImp era, BabbageEraTxOut era) =>
+  (ShelleyEraImp era, BabbageEraTxOut era, TxOutAllocation era ~ Value era) =>
   NonEmpty (Script era) ->
   ImpTestM era (Tx TopTx era)
 produceRefScriptsTx scripts = do

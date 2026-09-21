@@ -13,7 +13,7 @@ import Cardano.Ledger.Conway.State (
  )
 import Cardano.Ledger.Dijkstra.Era (DijkstraEra)
 import Cardano.Ledger.Dijkstra.State.Account ()
-import Cardano.Ledger.Dijkstra.TxOut ()
+import Cardano.Ledger.Dijkstra.TxOut.LedgerInstances ()
 
 instance EraStake DijkstraEra where
   type InstantStake DijkstraEra = ConwayInstantStake DijkstraEra

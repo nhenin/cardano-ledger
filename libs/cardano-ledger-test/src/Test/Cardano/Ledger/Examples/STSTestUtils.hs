@@ -175,6 +175,7 @@ timelockStakeCred = ScriptHashObj (timelockHash @era 2)
 initUTxO ::
   forall era.
   ( AllegraEraScript era
+  , TxOutAllocation era ~ Value era
   , AlonzoEraTxOut era
   , EraModel era
   ) =>

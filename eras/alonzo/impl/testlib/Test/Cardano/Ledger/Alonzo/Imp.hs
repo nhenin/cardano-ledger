@@ -25,6 +25,7 @@ import qualified Test.Cardano.Ledger.Shelley.Imp as Shelley
 spec ::
   ( AlonzoEraImp era
   , Event (EraRule "RUPD" era) ~ Shelley.RupdEvent
+  , TxOutAllocation era ~ Value era
   ) =>
   proxy era ->
   Spec
@@ -37,7 +38,7 @@ spec era = do
     UTXOW.spec
 
 alonzoToConwaySpec ::
-  (AlonzoEraImp era, ShelleyEraTxCert era) =>
+  (AlonzoEraImp era, ShelleyEraTxCert era, TxOutAllocation era ~ Value era) =>
   proxy era ->
   Spec
 alonzoToConwaySpec era = withImpInitEachEraVersion era $ do
